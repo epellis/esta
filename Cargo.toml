@@ -1,0 +1,7 @@
+[package]
+name = "esta"
+version = "0.1.0"
+authors = ["epe2 <nedellis1234@gmail.com>"]
+edition = "2018"
+
+[dependencies]
