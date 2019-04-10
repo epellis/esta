@@ -1,0 +1,8 @@
+var a = 1;
+var b = a + 1;
+var s = "Heya";
+var f = False;
+for (var i = 0; i < 10; i = i + ) {
+    a = a + i;
+}
+print(i);
