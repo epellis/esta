@@ -1,7 +1,8 @@
-mod scanner;
-mod tokens;
+use crate::ast;
+
+lalrpop_mod!(grammar);
 
 pub fn run(input: &str) {
-    let tokens = scanner::scan(input);
-    println!("Scanned Tokens: {:?}", tokens);
+    let expr = grammar::ExprParser::new().parse(input).unwrap();
+    println!("{:?}", expr);
 }

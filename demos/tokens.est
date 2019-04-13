@@ -1,8 +1,18 @@
 var a = 1;
 var b = a + 1;
 var s = "Heya";
+var e = "";
+var z = "85 Years Old."
 var f = False;
+var c = True || False && (1 <= 2 < 3 > 4 >= 5)
+var d = -3;
+var snake_case = 0;
 for (var i = 0; i < 10; i = i + ) {
-    a = a + i;
+    a = a + i - 1 * 1 / 1;
 }
-print(i);
+while (i > 10) {
+    i = i + 1;
+}
+if (i > 10) {
+    print(i);
+}

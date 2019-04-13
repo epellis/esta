@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["epe2 <nedellis1234@gmail.com>"]
 edition = "2018"
 
-[dependencies]
-lazy_static = "1.3.0"
-regex = "1.1.5"
+[build-dependencies]
+lalrpop = "0.16.3"
 
+[dependencies]
+regex = "1.1.5"
+lalrpop-util = "0.16.3"
