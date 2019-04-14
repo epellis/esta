@@ -1,31 +1,41 @@
-use crate::ast::{Expr, Opcode};
+use crate::ast::{Expr, Opcode, Literal};
 use std::str::FromStr;
 
 grammar;
 
 pub Expr: Box<Expr> = {
-    Expr ExprOp Factor => Box::new(Expr::Op(<>)),
-    Factor,
+    AddExpr,
 };
 
-ExprOp: Opcode = {
+AddOp: Opcode = {
     "+" => Opcode::Add,
     "-" => Opcode::Sub,
 };
 
-Factor: Box<Expr> = {
-    Factor FactorOp Term => Box::new(Expr::Op(<>)),
-    Term,
+AddExpr: Box<Expr> = {
+    AddExpr AddOp MultExpr => Box::new(Expr::BinaryOp(<>)),
+    MultExpr,
 };
 
-FactorOp: Opcode = {
+MultOp: Opcode = {
     "*" => Opcode::Mul,
     "/" => Opcode::Div,
 };
 
-Term: Box<Expr> = {
-    Num => Box::new(Expr::Number(<>)),
+MultExpr: Box<Expr> = {
+    MultExpr MultOp PrimaryExpr => Box::new(Expr::BinaryOp(<>)),
+    PrimaryExpr,
+};
+
+PrimaryExpr: Box<Expr> = {
+    Num => Box::new(Expr::Literal(Literal::Number(<>))),
+    Bool => Box::new(Expr::Literal(Literal::Boolean(<>))),
     "(" <Expr> ")",
+};
+
+Bool: bool = {
+    "True" => true,
+    "False" => false,
 };
 
 Num: i32 = {
