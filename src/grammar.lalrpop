@@ -1,15 +1,81 @@
-use crate::ast::{Expr, Opcode, Literal};
+use crate::ast::{Expr, Opcode, Literal, Stmt};
 use std::str::FromStr;
 
 grammar;
 
-pub Expr: Box<Expr> = {
-    AddExpr,
+pub Stmts: Vec<Box<Stmt>> = {
+    Stmt*,
+}
+
+// Comma Macro
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
 };
 
-AddOp: Opcode = {
-    "+" => Opcode::Add,
-    "-" => Opcode::Sub,
+// Nonterminal Symbols - Statements
+
+Stmt: Box<Stmt> = {
+    <decl:DeclStmt> ";" => decl,
+    <assign:AssignStmt> ";" => assign,
+    "while" <cond:Expr> "{" <stmts:Stmts> "}" => Box::new(Stmt::While(cond, Box::new(Stmt::Block(stmts)))),
+    "if" <cond:Expr> "{" <stmts:Stmts> "}" => {
+        Box::new(Stmt::If(cond,
+            Box::new(Stmt::Block(stmts)),
+            Box::new(Stmt::Block(Vec::new()))))},
+    "if" <cond:Expr> "{" <stmts:Stmts> "}" "else" <alt:Stmt> => {
+        Box::new(Stmt::If(cond,
+            Box::new(Stmt::Block(stmts)),
+            alt))},
+    "for" <init:Expr?> ";" <test:Expr?> ";" <increment:Expr?> ";" "{" <body:Stmts> "}" => {
+        Box::new(Stmt::For(init, test, increment,
+            Box::new(Stmt::Block(body))))},
+    "fun" <name:Identifier> "(" <params:Comma<Identifier>> ")" "{" <body:Stmts> "}" => {
+        Box::new(Stmt::FunDecl(
+            name,
+            params,
+            Box::new(Stmt::Block(body))))},
+    "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
+    "break" ";" => Box::new(Stmt::Break),
+    "continue" ";" => Box::new(Stmt::Continue),
+    <proc:FuncExpr> ";" => Box::new(Stmt::ImpureCall(proc))
+};
+
+DeclStmt: Box<Stmt> = {
+    "var" <id:Identifier> "=" <rhs:Expr> => Box::new(Stmt::Declaration(id, rhs)),
+    "var" <id:Identifier> => Box::new(Stmt::Declaration(id, Box::new(Expr::Literal(Literal::Nil)))),
+}
+
+AssignStmt: Box<Stmt> = {
+    <lhs:Expr> "=" <rhs:Expr> => Box::new(Stmt::Assignment(lhs, rhs)),
+};
+
+// Nonterminal Symbols - Expressions
+
+Expr: Box<Expr> = {
+    LogicalExpr,
+};
+
+LogicalExpr: Box<Expr> = {
+    LogicalExpr LogicalOp EqualityExpr => Box::new(Expr::BinaryOp(<>)),
+    EqualityExpr,
+};
+
+EqualityExpr: Box<Expr> = {
+    EqualityExpr EqualityOp CompareExpr => Box::new(Expr::BinaryOp(<>)),
+    CompareExpr,
+};
+
+CompareExpr: Box<Expr> = {
+    CompareExpr CompareOp AddExpr => Box::new(Expr::BinaryOp(<>)),
+    AddExpr,
 };
 
 AddExpr: Box<Expr> = {
@@ -17,20 +83,42 @@ AddExpr: Box<Expr> = {
     MultExpr,
 };
 
-MultOp: Opcode = {
-    "*" => Opcode::Mul,
-    "/" => Opcode::Div,
+MultExpr: Box<Expr> = {
+    MultExpr MultOp UnaryExpr => Box::new(Expr::BinaryOp(<>)),
+    UnaryExpr,
 };
 
-MultExpr: Box<Expr> = {
-    MultExpr MultOp PrimaryExpr => Box::new(Expr::BinaryOp(<>)),
-    PrimaryExpr,
+UnaryExpr: Box<Expr> = {
+    UnaryOp UnaryExpr => Box::new(Expr::UnaryOp(<>)),
+    FuncHandler
 };
+
+FuncHandler: Box<Expr> = {
+    FuncExpr,
+    PrimaryExpr
+}
+
+FuncExpr: Box<Expr> = {
+    <name:Identifier> "(" <params:Comma<Expr>> ")" => Box::new(Expr::FunCall(name, params)),
+}
 
 PrimaryExpr: Box<Expr> = {
     Num => Box::new(Expr::Literal(Literal::Number(<>))),
     Bool => Box::new(Expr::Literal(Literal::Boolean(<>))),
+    String => Box::new(Expr::Literal(Literal::String(<>))),
     "(" <Expr> ")",
+    "Nil" => Box::new(Expr::Literal(Literal::Nil)),
+    Identifier => Box::new(Expr::Identifier(<>)),
+};
+
+// Terminal Symbols
+
+Identifier: String = {
+    r#"[[:alpha:]]\w*"# => String::from(<>),
+};
+
+String: String = {
+    r#""[^"]*""# => String::from(<>),
 };
 
 Bool: bool = {
@@ -39,5 +127,37 @@ Bool: bool = {
 };
 
 Num: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap()
+    r"[0-9]+" => i32::from_str(<>).unwrap(),
+};
+
+LogicalOp: Opcode = {
+    "and" => Opcode::And,
+    "or" => Opcode::Or,
+};
+
+EqualityOp: Opcode = {
+    "==" => Opcode::EqualEqual,
+    "!=" => Opcode::BangEqual,
+};
+
+CompareOp: Opcode = {
+    "<" => Opcode::Lesser,
+    ">" => Opcode::Greater,
+    "<=" => Opcode::LesserEqual,
+    ">=" => Opcode::GreaterEqual,
+};
+
+MultOp: Opcode = {
+    "*" => Opcode::Mul,
+    "/" => Opcode::Div,
+};
+
+AddOp: Opcode = {
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+};
+
+UnaryOp: Opcode = {
+    "not" => Opcode::Not,
+    "-" => Opcode::Sub,
 };
