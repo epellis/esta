@@ -6,21 +6,21 @@ use std::fmt;
 #[derive(Clone)]
 pub enum Stmt {
     Block(Vec<Box<Stmt>>),
-    If(Box<Expr>, Box<Stmt>, Box<Stmt>),
-    While(Box<Expr>, Box<Stmt>),
+    If(ExprNode, Box<Stmt>, Box<Stmt>),
+    While(ExprNode, Box<Stmt>),
     For(
         Option<Box<Stmt>>,
-        Option<Box<Expr>>,
+        Option<ExprNode>,
         Option<Box<Stmt>>,
         Box<Stmt>,
     ),
-    Return(Option<Box<Expr>>),
+    Return(Option<ExprNode>),
     Break,
     Continue,
-    Declaration(String, Box<Expr>),
-    FunDecl(String, Vec<String>, Box<Stmt>), // TODO: Vec<String> -> Vec<Box<Expr>>
-    Assignment(Box<Expr>, Box<Expr>),
-    ImpureCall(Box<Expr>),
+    Declaration(String, ExprNode),
+    FunDecl(String, Vec<ExprNode>, Box<Stmt>), // TODO: Vec<String> -> Vec<Box<Expr>>
+    Assignment(ExprNode, ExprNode),
+    ImpureCall(ExprNode),
 }
 
 /// Expression Abstract Syntax Tree Node
@@ -33,18 +33,19 @@ pub enum Stmt {
 /// - Literal: See below
 /// - BinaryOp: A binary operation performed on a lhs and a rhs
 /// - UnaryOp: A unary operation performed on a rhs
+#[derive(Clone)]
 pub struct ExprNode {
-    expr: Expr,
-    type_of: Type,
+    pub expr: Box<Expr>,
+    pub type_of: Type,
 }
 
 #[derive(Clone)]
 pub enum Expr {
     Identifier(String), // TODO: Assign type
     Literal(Literal),
-    BinaryOp(Box<Expr>, Opcode, Box<Expr>),
-    UnaryOp(Opcode, Box<Expr>),
-    FunCall(String, Vec<Box<Expr>>),
+    BinaryOp(ExprNode, Opcode, ExprNode),
+    UnaryOp(Opcode, ExprNode),
+    FunCall(String, Vec<ExprNode>),
 }
 
 /// Literal Values
@@ -59,6 +60,7 @@ pub enum Literal {
 }
 
 /// Basic Types
+#[derive(Clone)]
 pub enum Type {
     Number,
     Boolean,
@@ -89,6 +91,33 @@ pub enum Opcode {
     Not,
 }
 
+impl ExprNode {
+    pub fn new_default() -> ExprNode {
+        ExprNode {
+            expr: Box::new(Expr::Literal(Literal::Nil)),
+            type_of: Type::Nil,
+        }
+    }
+    pub fn new_untyped(expr: Expr) -> ExprNode {
+        ExprNode {
+            expr: Box::new(expr),
+            type_of: Type::Nil,
+        }
+    }
+    pub fn new_typed(expr: Expr, type_of: Type) -> ExprNode {
+        ExprNode {
+            expr: Box::new(expr),
+            type_of,
+        }
+    }
+    pub fn identify(&self) -> String {
+        match &*self.expr {
+            Expr::Identifier(identity) => identity.clone(),
+            _ => "".to_string(),
+        }
+    }
+}
+
 impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -107,24 +136,42 @@ impl fmt::Display for Stmt {
             }
             Stmt::For(setup, test, increment, block) => {
                 let setup = setup.clone().unwrap_or(Box::new(Stmt::Block(Vec::new())));
-                let test = test
-                    .clone()
-                    .unwrap_or(Box::new(Expr::Literal(Literal::Nil)));
+                let test = test.clone().unwrap_or(ExprNode::new_default());
                 let increment = increment
                     .clone()
                     .unwrap_or(Box::new(Stmt::Block(Vec::new())));
                 write!(f, "(for {} {} {} {})", setup, test, increment, block)
             }
             Stmt::Return(returned) => {
-                let returned = returned
-                    .clone()
-                    .unwrap_or(Box::new(Expr::Literal(Literal::Nil)));
+                let returned = returned.clone().unwrap_or(ExprNode::new_default());
                 write!(f, "(return {})", returned)
             }
             Stmt::Break => write!(f, "(break)"),
             Stmt::Continue => write!(f, "(continue)"),
-            Stmt::FunDecl(name, params, body) => write!(f, "(fun {} {:?} {})", name, params, body),
+            Stmt::FunDecl(name, params, body) => {
+                let params: Vec<String> = params.iter().map(|p| format!("{}", p)).collect();
+                let params = params.join(", ");
+                write!(f, "(fun {} {} {})", name, params, body)
+            }
+
             Stmt::ImpureCall(fun) => write!(f, "{}", fun),
+        }
+    }
+}
+
+impl fmt::Display for ExprNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}: {})", self.expr, self.type_of)
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Type::Nil => write!(f, "nil"),
+            Type::Number => write!(f, "num"),
+            Type::Boolean => write!(f, "bool"),
+            Type::String => write!(f, "str"),
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Literal, Stmt};
+use crate::ast::{Expr, ExprNode, Literal, Stmt};
 use std::collections::HashSet;
 
 pub struct Scope {
@@ -56,8 +56,8 @@ impl Scope {
         Ok(())
     }
 
-    pub fn traverse_expr(&mut self, expr: &Expr) -> Result<(), &'static str> {
-        match expr {
+    pub fn traverse_expr(&mut self, expr: &ExprNode) -> Result<(), &'static str> {
+        match &*expr.expr {
             Expr::Identifier(id) => {
                 self.lookup_var(id)
                     .ok_or("could not find declaration of id")?;

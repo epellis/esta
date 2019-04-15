@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Opcode, Literal, Stmt};
+use crate::ast::{Expr, Opcode, Literal, Stmt, ExprNode, Type};
 use std::str::FromStr;
 
 grammar;
@@ -37,7 +37,7 @@ Stmt: Box<Stmt> = {
     "for" <init:DeclStmt?> ";" <test:Expr?> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         Box::new(Stmt::For(init, test, increment,
             Box::new(Stmt::Block(body))))},
-    "fun" <name:Identifier> "(" <params:Comma<Identifier>> ")" "{" <body:Stmts> "}" => {
+    "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "{" <body:Stmts> "}" => {
         Box::new(Stmt::FunDecl(
             name,
             params,
@@ -49,8 +49,8 @@ Stmt: Box<Stmt> = {
 };
 
 DeclStmt: Box<Stmt> = {
-    "var" <id:Identifier> "=" <rhs:Expr> => Box::new(Stmt::Declaration(id, rhs)),
-    "var" <id:Identifier> => Box::new(Stmt::Declaration(id, Box::new(Expr::Literal(Literal::Nil)))),
+    "var" <id:Identifier> "=" <rhs:Expr> => Box::new(Stmt::Declaration(id.identify(), rhs)),
+    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify(), id)),
 }
 
 AssignStmt: Box<Stmt> = {
@@ -59,61 +59,74 @@ AssignStmt: Box<Stmt> = {
 
 // Nonterminal Symbols - Expressions
 
-Expr: Box<Expr> = {
+Expr: ExprNode = {
     LogicalExpr,
 };
 
-LogicalExpr: Box<Expr> = {
-    LogicalExpr LogicalOp EqualityExpr => Box::new(Expr::BinaryOp(<>)),
+LogicalExpr: ExprNode = {
+    LogicalExpr LogicalOp EqualityExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
     EqualityExpr,
 };
 
-EqualityExpr: Box<Expr> = {
-    EqualityExpr EqualityOp CompareExpr => Box::new(Expr::BinaryOp(<>)),
+EqualityExpr: ExprNode = {
+    EqualityExpr EqualityOp CompareExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
     CompareExpr,
 };
 
-CompareExpr: Box<Expr> = {
-    CompareExpr CompareOp AddExpr => Box::new(Expr::BinaryOp(<>)),
+CompareExpr: ExprNode = {
+    CompareExpr CompareOp AddExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
     AddExpr,
 };
 
-AddExpr: Box<Expr> = {
-    AddExpr AddOp MultExpr => Box::new(Expr::BinaryOp(<>)),
+AddExpr: ExprNode = {
+    AddExpr AddOp MultExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
     MultExpr,
 };
 
-MultExpr: Box<Expr> = {
-    MultExpr MultOp UnaryExpr => Box::new(Expr::BinaryOp(<>)),
+MultExpr: ExprNode = {
+    MultExpr MultOp UnaryExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
     UnaryExpr,
 };
 
-UnaryExpr: Box<Expr> = {
-    UnaryOp UnaryExpr => Box::new(Expr::UnaryOp(<>)),
+UnaryExpr: ExprNode = {
+    UnaryOp UnaryExpr => ExprNode::new_untyped(Expr::UnaryOp(<>)),
     FuncHandler
 };
 
-FuncHandler: Box<Expr> = {
+FuncHandler: ExprNode = {
     FuncExpr,
     PrimaryExpr
 }
 
-FuncExpr: Box<Expr> = {
-    <name:Identifier> "(" <params:Comma<Expr>> ")" => Box::new(Expr::FunCall(name, params)),
+FuncExpr: ExprNode = {
+    <name:IdentifierName> "(" <params:Comma<Expr>> ")" => ExprNode::new_untyped(Expr::FunCall(name, params)),
 }
 
-PrimaryExpr: Box<Expr> = {
-    Num => Box::new(Expr::Literal(Literal::Number(<>))),
-    Bool => Box::new(Expr::Literal(Literal::Boolean(<>))),
-    String => Box::new(Expr::Literal(Literal::String(<>))),
+PrimaryExpr: ExprNode = {
+    Num => ExprNode::new_typed(Expr::Literal(Literal::Number(<>)), Type::Number),
+    Bool => ExprNode::new_typed(Expr::Literal(Literal::Boolean(<>)), Type::Boolean),
+    String => ExprNode::new_typed(Expr::Literal(Literal::String(<>)), Type::String),
     "(" <Expr> ")",
-    "Nil" => Box::new(Expr::Literal(Literal::Nil)),
-    Identifier => Box::new(Expr::Identifier(<>)),
+    "Nil" => ExprNode::new_untyped(Expr::Literal(Literal::Nil)),
+//    Identifier => ExprNode::new_untyped(Expr::Identifier(<>)),
+    Identifier,
 };
 
 // Terminal Symbols
 
-Identifier: String = {
+Type: Type = {
+    "nil" => Type::Nil,
+    "num" => Type::Number,
+    "bool" => Type::Boolean,
+    "str" => Type::String,
+}
+
+Identifier: ExprNode = {
+    <id:IdentifierName> ":" <t:Type> => ExprNode::new_typed(Expr::Identifier(id), t),
+    <id:IdentifierName> => ExprNode::new_untyped(Expr::Identifier(id)),
+}
+
+IdentifierName: String = {
     r#"[[:alpha:]]\w*"# => String::from(<>),
 };
 
