@@ -9,16 +9,16 @@ pub enum Stmt {
     If(Box<Expr>, Box<Stmt>, Box<Stmt>),
     While(Box<Expr>, Box<Stmt>),
     For(
+        Option<Box<Stmt>>,
         Option<Box<Expr>>,
-        Option<Box<Expr>>,
-        Option<Box<Expr>>,
+        Option<Box<Stmt>>,
         Box<Stmt>,
     ),
     Return(Option<Box<Expr>>),
     Break,
     Continue,
     Declaration(String, Box<Expr>),
-    FunDecl(String, Vec<String>, Box<Stmt>),
+    FunDecl(String, Vec<String>, Box<Stmt>), // TODO: Vec<String> -> Vec<Box<Expr>>
     Assignment(Box<Expr>, Box<Expr>),
     ImpureCall(Box<Expr>),
 }
@@ -33,9 +33,14 @@ pub enum Stmt {
 /// - Literal: See below
 /// - BinaryOp: A binary operation performed on a lhs and a rhs
 /// - UnaryOp: A unary operation performed on a rhs
+pub struct ExprNode {
+    expr: Expr,
+    type_of: Type,
+}
+
 #[derive(Clone)]
 pub enum Expr {
-    Identifier(String),
+    Identifier(String), // TODO: Assign type
     Literal(Literal),
     BinaryOp(Box<Expr>, Opcode, Box<Expr>),
     UnaryOp(Opcode, Box<Expr>),
@@ -50,6 +55,14 @@ pub enum Literal {
     Number(i32),
     Boolean(bool),
     String(String),
+    Nil,
+}
+
+/// Basic Types
+pub enum Type {
+    Number,
+    Boolean,
+    String,
     Nil,
 }
 
@@ -93,15 +106,13 @@ impl fmt::Display for Stmt {
                 write!(f, "(if {} {} {})", condition, block, alternate)
             }
             Stmt::For(setup, test, increment, block) => {
-                let setup = setup
-                    .clone()
-                    .unwrap_or(Box::new(Expr::Literal(Literal::Nil)));
+                let setup = setup.clone().unwrap_or(Box::new(Stmt::Block(Vec::new())));
                 let test = test
                     .clone()
                     .unwrap_or(Box::new(Expr::Literal(Literal::Nil)));
                 let increment = increment
                     .clone()
-                    .unwrap_or(Box::new(Expr::Literal(Literal::Nil)));
+                    .unwrap_or(Box::new(Stmt::Block(Vec::new())));
                 write!(f, "(for {} {} {} {})", setup, test, increment, block)
             }
             Stmt::Return(returned) => {

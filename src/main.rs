@@ -23,7 +23,7 @@ fn run_prompt() {
             .expect("Couldn't read input");
         line.trim();
 
-        esta::run(&line);
+        esta::run(&line).map_err(|err| eprintln!("{}", err));
 
         io::stdout().flush().unwrap();
     }
@@ -31,5 +31,5 @@ fn run_prompt() {
 
 fn run_file(path: &str) {
     let buffer = fs::read_to_string(path).expect("Couldn't read file!");
-    esta::run(&buffer);
+    esta::run(&buffer).unwrap();
 }

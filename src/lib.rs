@@ -4,8 +4,8 @@ pub mod frontend;
 #[macro_use]
 extern crate lalrpop_util;
 
-pub fn run(input: &str) {
-    frontend::run(input);
+pub fn run(input: &str) -> Result<(), &'static str> {
+    frontend::run(input)
 }
 
 #[cfg(test)]

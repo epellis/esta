@@ -34,7 +34,7 @@ Stmt: Box<Stmt> = {
         Box::new(Stmt::If(cond,
             Box::new(Stmt::Block(stmts)),
             alt))},
-    "for" <init:Expr?> ";" <test:Expr?> ";" <increment:Expr?> ";" "{" <body:Stmts> "}" => {
+    "for" <init:DeclStmt?> ";" <test:Expr?> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         Box::new(Stmt::For(init, test, increment,
             Box::new(Stmt::Block(body))))},
     "fun" <name:Identifier> "(" <params:Comma<Identifier>> ")" "{" <body:Stmts> "}" => {
@@ -45,7 +45,7 @@ Stmt: Box<Stmt> = {
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
     "break" ";" => Box::new(Stmt::Break),
     "continue" ";" => Box::new(Stmt::Continue),
-    <proc:FuncExpr> ";" => Box::new(Stmt::ImpureCall(proc))
+    <proc:FuncExpr> ";" => Box::new(Stmt::ImpureCall(proc)),
 };
 
 DeclStmt: Box<Stmt> = {
@@ -161,3 +161,4 @@ UnaryOp: Opcode = {
     "not" => Opcode::Not,
     "-" => Opcode::Sub,
 };
+

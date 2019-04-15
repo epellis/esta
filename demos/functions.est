@@ -1,0 +1,9 @@
+fun multiply(a, b) {
+    if a <= 0 {
+        return b;
+    } else {
+        return b + multiply(a - 1, b);
+    }
+}
+
+print(multiply(3, 4) == 12);
