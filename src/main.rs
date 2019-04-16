@@ -17,13 +17,16 @@ fn run_prompt() {
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
-        let mut line = String::new();
+        let mut buffer = String::new();
         io::stdin()
-            .read_line(&mut line)
+            .read_line(&mut buffer)
             .expect("Couldn't read input");
-        line.trim();
+        buffer.trim();
 
-        esta::run(&line).map_err(|err| eprintln!("{}", err));
+        match esta::run(&buffer) {
+            Ok(()) => {}
+            Err(why) => eprintln!("{}", why),
+        };
 
         io::stdout().flush().unwrap();
     }
@@ -31,5 +34,8 @@ fn run_prompt() {
 
 fn run_file(path: &str) {
     let buffer = fs::read_to_string(path).expect("Couldn't read file!");
-    esta::run(&buffer).unwrap();
+    match esta::run(&buffer) {
+        Ok(()) => {}
+        Err(why) => eprintln!("{}", why),
+    };
 }

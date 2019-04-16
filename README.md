@@ -7,7 +7,7 @@ _Interpreted_: `.est` source code is compiled into byte code (simple assembly in
 
 _Gradually Typed_: The Esta Interpreter can infer variable type (e.g.):
 ```c
-var a: int = 4;     // Explicitly declare a is an int
+var a: num = 4;     // Explicitly declare a is an int
 
 var c = a + b;      // Since c and b have unknown types, they adopt a's type
 ```
@@ -36,4 +36,13 @@ git clone https://github.com/epellis/esta.git
 cd esta
 cargo build
 cargo run demos/hello.est
+```
+
+## Deployment
+
+_WIP_: Installer coming soon
+
+```
+cargo build --release
+cargo run my_program.est
 ```

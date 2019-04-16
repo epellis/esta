@@ -1,9 +1,8 @@
-fun multiply(a, b) {
+fun multiply(a, b) -> num {
     if a <= 0 {
         return b;
-    } else {
-        return b + multiply(a - 1, b);
     }
+    return b + multiply(a-b, b);
 }
 
 print(multiply(3, 4) == 12);

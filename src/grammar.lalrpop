@@ -30,18 +30,21 @@ Stmt: Box<Stmt> = {
         Box::new(Stmt::If(cond,
             Box::new(Stmt::Block(stmts)),
             Box::new(Stmt::Block(Vec::new()))))},
-    "if" <cond:Expr> "{" <stmts:Stmts> "}" "else" <alt:Stmt> => {
-        Box::new(Stmt::If(cond,
-            Box::new(Stmt::Block(stmts)),
-            alt))},
     "for" <init:DeclStmt?> ";" <test:Expr?> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         Box::new(Stmt::For(init, test, increment,
+            Box::new(Stmt::Block(body))))},
+    "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "->" <ret:Type> "{" <body:Stmts> "}" => {
+        Box::new(Stmt::FunDecl(
+            name,
+            params,
+            ret,
             Box::new(Stmt::Block(body))))},
     "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "{" <body:Stmts> "}" => {
         Box::new(Stmt::FunDecl(
             name,
             params,
-            Box::new(Stmt::Block(body))))},
+            Type::Nil,
+    Box::new(Stmt::Block(body))))},
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
     "break" ";" => Box::new(Stmt::Break),
     "continue" ";" => Box::new(Stmt::Continue),
@@ -50,7 +53,7 @@ Stmt: Box<Stmt> = {
 
 DeclStmt: Box<Stmt> = {
     "var" <id:Identifier> "=" <rhs:Expr> => Box::new(Stmt::Declaration(id.identify(), rhs)),
-    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify(), id)),
+    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify(), ExprNode::new_typed(Expr::Literal(Literal::Nil), id.type_of))),
 }
 
 AssignStmt: Box<Stmt> = {

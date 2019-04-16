@@ -18,7 +18,7 @@ pub enum Stmt {
     Break,
     Continue,
     Declaration(String, ExprNode),
-    FunDecl(String, Vec<ExprNode>, Box<Stmt>), // TODO: Vec<String> -> Vec<Box<Expr>>
+    FunDecl(String, Vec<ExprNode>, Type, Box<Stmt>),
     Assignment(ExprNode, ExprNode),
     ImpureCall(ExprNode),
 }
@@ -38,7 +38,6 @@ pub struct ExprNode {
     pub expr: Box<Expr>,
     pub type_of: Type,
 }
-
 #[derive(Clone)]
 pub enum Expr {
     Identifier(String), // TODO: Assign type
@@ -98,10 +97,15 @@ impl ExprNode {
             type_of: Type::Nil,
         }
     }
+    /// Create a new expression with an indeterminate type
+    ///
+    /// This function will attempt to find the type by searching it's children
     pub fn new_untyped(expr: Expr) -> ExprNode {
+        //        let type_of = expr.type_of();
+        let type_of = Type::Nil;
         ExprNode {
             expr: Box::new(expr),
-            type_of: Type::Nil,
+            type_of,
         }
     }
     pub fn new_typed(expr: Expr, type_of: Type) -> ExprNode {
@@ -123,7 +127,7 @@ impl fmt::Display for Stmt {
         match self {
             Stmt::Block(stmts) => {
                 let stmts: Vec<String> = stmts.iter().map(|stmt| format!("{}", stmt)).collect();
-                let stmts = stmts.join(", ");
+                let stmts = stmts.join("\n");
                 write!(f, "([{}])", stmts)
             }
             Stmt::Assignment(lhs, rhs) => write!(f, "({} <- {})", lhs, rhs),
@@ -148,10 +152,10 @@ impl fmt::Display for Stmt {
             }
             Stmt::Break => write!(f, "(break)"),
             Stmt::Continue => write!(f, "(continue)"),
-            Stmt::FunDecl(name, params, body) => {
+            Stmt::FunDecl(name, params, ret, body) => {
                 let params: Vec<String> = params.iter().map(|p| format!("{}", p)).collect();
                 let params = params.join(", ");
-                write!(f, "(fun {} {} {})", name, params, body)
+                write!(f, "(fun {} {}-> {} ({}))", name, params, ret, body)
             }
 
             Stmt::ImpureCall(fun) => write!(f, "{}", fun),
@@ -161,7 +165,7 @@ impl fmt::Display for Stmt {
 
 impl fmt::Display for ExprNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}: {})", self.expr, self.type_of)
+        write!(f, "{}:{}", self.expr, self.type_of)
     }
 }
 

@@ -10,10 +10,8 @@ pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = grammar::StmtsParser::new()
         .parse(input)
         .map_err(|_| "Parsing Error")?;
-    for stmt in &stmts {
-        println!("{}", stmt);
-    }
     let stmts = Stmt::Block(stmts);
     let stmts = scope::scope(stmts)?;
+    println!("{}", stmts);
     Ok(())
 }

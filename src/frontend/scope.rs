@@ -1,34 +1,34 @@
-use crate::ast::{Expr, ExprNode, Literal, Stmt};
-use std::collections::HashSet;
+use crate::ast::{Expr, ExprNode, Stmt};
+use std::collections::HashMap;
 
 pub struct Scope {
-    enclosures: Vec<HashSet<String>>,
+    enclosures: Vec<HashMap<String, ExprNode>>,
 }
 
 impl Scope {
     pub fn new_root() -> Scope {
-        let enclosures = vec![HashSet::new()];
+        let enclosures = vec![HashMap::new()];
         Scope { enclosures }
     }
 
     pub fn push_level(&mut self) {
-        self.enclosures.push(HashSet::new());
+        self.enclosures.push(HashMap::new());
     }
 
     pub fn pop_level(&mut self) {
         self.enclosures.pop().expect("popped the global stack");
     }
 
-    pub fn define(&mut self, id: &str) {
+    pub fn define(&mut self, id: &str, val: &ExprNode) {
         let mut top = self.enclosures.pop().expect("popped the global stack");
-        top.insert(id.to_string());
+        top.insert(id.to_string(), val.clone());
         self.enclosures.push(top);
     }
 
-    pub fn lookup_var(&mut self, id: &str) -> Option<usize> {
-        for (i, encl) in self.enclosures.iter().rev().enumerate() {
-            if encl.contains(id) {
-                return Some(i);
+    pub fn lookup_var(&mut self, id: &str) -> Option<&ExprNode> {
+        for encl in self.enclosures.iter().rev() {
+            if let Some(val) = encl.get(id) {
+                return Some(val);
             }
         }
         None
@@ -44,7 +44,7 @@ impl Scope {
                 self.pop_level();
             }
             Stmt::Declaration(id, rhs) => {
-                self.define(id);
+                self.define(id, rhs);
                 self.traverse_expr(rhs)?;
             }
             Stmt::Assignment(lhs, rhs) => {
@@ -59,8 +59,10 @@ impl Scope {
     pub fn traverse_expr(&mut self, expr: &ExprNode) -> Result<(), &'static str> {
         match &*expr.expr {
             Expr::Identifier(id) => {
-                self.lookup_var(id)
-                    .ok_or("could not find declaration of id")?;
+                self.lookup_var(id).ok_or_else(|| {
+                    eprintln!("Couldn't find: {}", id);
+                    "No variable declaration"
+                })?;
             }
             _ => {}
         }
