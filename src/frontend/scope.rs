@@ -16,6 +16,12 @@ impl Scope {
     }
 
     pub fn pop_level(&mut self) {
+        let top = self.enclosures.last().unwrap();
+
+        for (key, val) in top.iter() {
+            println!("{} {}", key, val);
+        }
+
         self.enclosures.pop().expect("popped the global stack");
     }
 
@@ -50,6 +56,11 @@ impl Scope {
             Stmt::Assignment(lhs, rhs) => {
                 self.traverse_expr(lhs)?;
                 self.traverse_expr(rhs)?;
+            }
+            Stmt::FunDecl(id, params, ret, body) => {
+                // TODO: Add function to some type of table, return type of such
+                // TODO: Define parameters in their scope
+                // TODO: Traverse body
             }
             _ => {}
         }

@@ -1,0 +1,11 @@
+fun foo() {
+    var a = bar();
+}
+
+fun bar() {
+    var a = bar();
+}
+
+fun baz() {
+    return a;
+}

@@ -1,11 +1,16 @@
 mod ast;
+pub mod backend;
 pub mod frontend;
+pub mod middleend;
+pub mod vm;
 
 #[macro_use]
 extern crate lalrpop_util;
 
 pub fn run(input: &str) -> Result<(), &'static str> {
-    frontend::run(input)
+    //    frontend::run(input)
+    //    let mut vm = vm::VirtualMachine::new();
+    Ok(())
 }
 
 #[cfg(test)]
