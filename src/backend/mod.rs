@@ -10,8 +10,4 @@ fn gen_expr(expr: &Expr) {
     use crate::frontend::ast::Opcode::*;
 
     // TODO: Add a static mapping from Opcodes to Bytecodes?
-
-    //    match expr {
-    //        BinaryOp(lhs, op, rhs) => {}
-    //    }
 }

@@ -4,6 +4,7 @@ use self::bytecode::{ByteCode, Inst};
 use std::ops::Add;
 
 /// The Esta Virtual Machine
+#[allow(dead_code)]
 pub struct VirtualMachine {
     stack: Vec<u64>,
     mem: Vec<u64>,
@@ -13,6 +14,7 @@ pub struct VirtualMachine {
 }
 
 // See: http://aosabook.org/en/500L/a-python-interpreter-written-in-python.html
+#[allow(dead_code)]
 impl VirtualMachine {
     pub fn new(inst: Vec<Inst<u64>>) -> VirtualMachine {
         VirtualMachine {

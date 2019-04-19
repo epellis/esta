@@ -1,16 +1,17 @@
+var a = 10;
+
 fun foo() {
-    var a = bar();
-    return a;
+    var b = bar();
+    return b;
 }
 
 fun bar() {
-    var a = bar();
-    return a;
+    var c = baz();
+    return c;
 }
 
 fun baz() {
     return a;
 }
 
-var a;
 a = foo();

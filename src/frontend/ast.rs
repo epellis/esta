@@ -39,7 +39,6 @@ pub struct ExprNode {
 #[derive(Clone)]
 pub enum Expr {
     Identifier(String),
-    // TODO: Assign type
     Literal(Literal),
     BinaryOp(ExprNode, Opcode, ExprNode),
     UnaryOp(Opcode, ExprNode),
@@ -155,8 +154,6 @@ impl fmt::Display for Stmt {
                 let returned = returned.clone().unwrap_or(ExprNode::new_default());
                 write!(f, "(return {})", returned)
             }
-            //            Stmt::Break => write!(f, "(break)"),
-            //            Stmt::Continue => write!(f, "(continue)"),
             Stmt::FunDecl(name, params, ret, body) => {
                 let params: Vec<String> = params.iter().map(|p| format!("{}", p)).collect();
                 let params = params.join(", ");

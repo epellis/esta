@@ -20,11 +20,13 @@ pub enum ByteCode {
     HALT, // Stop the VM from executing
 }
 
+#[allow(dead_code)]
 pub struct Inst<T> {
     pub inst: ByteCode,
     pub data: Option<T>,
 }
 
+#[allow(dead_code)]
 impl<T> Inst<T> {
     pub fn new_data(inst: ByteCode, data: T) -> Inst<T> {
         Inst {
