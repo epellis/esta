@@ -1,4 +1,4 @@
-mod bytecode;
+pub mod bytecode;
 
 use self::bytecode::{ByteCode, Inst};
 use std::ops::Add;
@@ -6,15 +6,18 @@ use std::ops::Add;
 /// The Esta Virtual Machine
 pub struct VirtualMachine {
     stack: Vec<u64>,
+    mem: Vec<u64>,
     inst: Vec<Inst<u64>>,
     data: u64,
     pc: usize,
 }
 
+// See: http://aosabook.org/en/500L/a-python-interpreter-written-in-python.html
 impl VirtualMachine {
     pub fn new(inst: Vec<Inst<u64>>) -> VirtualMachine {
         VirtualMachine {
             stack: Vec::new(),
+            mem: Vec::new(),
             inst,
             data: 0,
             pc: 0,
@@ -58,6 +61,41 @@ impl VirtualMachine {
                     let res = self.pop()? == 1 || self.pop()? == 1;
                     self.shrink_stack(before - 2)?;
                     self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::EQ => {
+                    let res = self.pop()? == self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::NEQ => {
+                    let res = self.pop()? != self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::GT => {
+                    let res = self.pop()? > self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::GTE => {
+                    let res = self.pop()? >= self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::LT => {
+                    let res = self.pop()? < self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::LTE => {
+                    let res = self.pop()? <= self.pop()?;
+                    self.push(&VirtualMachine::map_bool(res));
+                }
+                ByteCode::BRT => {
+                    let pc = curr.data.unwrap().clone() as usize;
+                    if self.pop()? == 1 {
+                        self.pc = pc
+                    }
+                }
+                ByteCode::STR => {}
+                ByteCode::LD => {}
+                ByteCode::JMP => {
+                    self.pc = curr.data.unwrap() as usize;
                 }
                 ByteCode::HALT => return Ok(()),
             }
@@ -108,14 +146,14 @@ mod tests {
 
     #[test]
     fn test_init() {
-        let mut instructions: Vec<Inst<u64>> = vec![Inst::new_inst(ByteCode::HALT)];
+        let instructions: Vec<Inst<u64>> = vec![Inst::new_inst(ByteCode::HALT)];
         let mut vm: VirtualMachine = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
     }
 
     #[test]
     fn test_add() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_inst(ByteCode::ADD),
@@ -128,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_sub() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_inst(ByteCode::SUB),
@@ -141,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_mul() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_inst(ByteCode::MUL),
@@ -154,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_div() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_inst(ByteCode::DIV),
@@ -167,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_and() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 0),
             Inst::new_inst(ByteCode::AND),
@@ -180,10 +218,36 @@ mod tests {
 
     #[test]
     fn test_or() {
-        let mut instructions: Vec<Inst<u64>> = vec![
+        let instructions: Vec<Inst<u64>> = vec![
             Inst::new_data(ByteCode::PUSH, 1),
             Inst::new_data(ByteCode::PUSH, 0),
             Inst::new_inst(ByteCode::OR),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(*vm.debug_stack(), vec![1]);
+    }
+
+    #[test]
+    fn test_eq() {
+        let instructions: Vec<Inst<u64>> = vec![
+            Inst::new_data(ByteCode::PUSH, 1),
+            Inst::new_data(ByteCode::PUSH, 1),
+            Inst::new_inst(ByteCode::EQ),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(*vm.debug_stack(), vec![1]);
+    }
+
+    #[test]
+    fn test_gte() {
+        let instructions: Vec<Inst<u64>> = vec![
+            Inst::new_data(ByteCode::PUSH, 2),
+            Inst::new_data(ByteCode::PUSH, 7),
+            Inst::new_inst(ByteCode::GTE),
             Inst::new_inst(ByteCode::HALT),
         ];
         let mut vm: VirtualMachine = VirtualMachine::new(instructions);

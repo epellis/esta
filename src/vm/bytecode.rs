@@ -7,6 +7,16 @@ pub enum ByteCode {
     DIV,  // Divide the top two values and push it to the stack
     AND,  // And the top two values and push it to the stack
     OR,   // Or the top two values and push it to the stack
+    EQ,   // Compare the top two values and push it to the stack
+    NEQ,  // Compare the top two values and push it to the stack
+    GT,   // Compare the top two values and push it to the stack
+    GTE,  // Compare the top two values and push it to the stack
+    LT,   // Compare the top two values and push it to the stack
+    LTE,  // Compare the top two values and push it to the stack
+    STR,  // Pop the top of the stack and store it in the provided index
+    LD,   // Load an item from the provided index and push it to the stack
+    BRT,  // Branch to the instruction specified if the top of the stack is 1
+    JMP,  // Jump to the instruction specified
     HALT, // Stop the VM from executing
 }
 

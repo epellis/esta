@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// Statement Abstract Syntax Tree Node
+/// Statement Abstract Parse Tree Node
 /// - Declaration: Define an identifier and bind it to the expression
 /// - Assignment: Binds an identifier to a new expression
 #[derive(Clone)]
@@ -15,12 +15,9 @@ pub enum Stmt {
         Box<Stmt>,
     ),
     Return(Option<ExprNode>),
-    Break,
-    Continue,
     Declaration(String, ExprNode),
     FunDecl(String, Vec<ExprNode>, Type, Box<Stmt>),
     Assignment(ExprNode, ExprNode),
-    ImpureCall(ExprNode),
 }
 
 /// Expression Abstract Syntax Tree Node
@@ -38,9 +35,11 @@ pub struct ExprNode {
     pub expr: Box<Expr>,
     pub type_of: Type,
 }
+
 #[derive(Clone)]
 pub enum Expr {
-    Identifier(String), // TODO: Assign type
+    Identifier(String),
+    // TODO: Assign type
     Literal(Literal),
     BinaryOp(ExprNode, Opcode, ExprNode),
     UnaryOp(Opcode, ExprNode),
@@ -114,6 +113,12 @@ impl ExprNode {
             type_of,
         }
     }
+    pub fn new_nil() -> ExprNode {
+        ExprNode {
+            expr: Box::new(Expr::Literal(Literal::Nil)),
+            type_of: Type::Nil,
+        }
+    }
     pub fn identify(&self) -> String {
         match &*self.expr {
             Expr::Identifier(identity) => identity.clone(),
@@ -150,15 +155,13 @@ impl fmt::Display for Stmt {
                 let returned = returned.clone().unwrap_or(ExprNode::new_default());
                 write!(f, "(return {})", returned)
             }
-            Stmt::Break => write!(f, "(break)"),
-            Stmt::Continue => write!(f, "(continue)"),
+            //            Stmt::Break => write!(f, "(break)"),
+            //            Stmt::Continue => write!(f, "(continue)"),
             Stmt::FunDecl(name, params, ret, body) => {
                 let params: Vec<String> = params.iter().map(|p| format!("{}", p)).collect();
                 let params = params.join(", ");
                 write!(f, "(fun {} {}-> {} ({}))", name, params, ret, body)
             }
-
-            Stmt::ImpureCall(fun) => write!(f, "{}", fun),
         }
     }
 }

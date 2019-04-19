@@ -1,4 +1,5 @@
-use crate::ast::{Expr, ExprNode, Stmt};
+use super::visitor::{walk_expr, walk_stmt, Visitor};
+use crate::frontend::ast::{Expr, ExprNode, Stmt};
 use std::collections::HashMap;
 
 pub struct Scope {
@@ -39,50 +40,17 @@ impl Scope {
         }
         None
     }
+}
 
-    pub fn traverse_stmt(&mut self, stmt: &Stmt) -> Result<(), &'static str> {
-        match stmt {
-            Stmt::Block(stmts) => {
-                self.push_level();
-                for stmt in stmts {
-                    self.traverse_stmt(stmt)?;
-                }
-                self.pop_level();
-            }
-            Stmt::Declaration(id, rhs) => {
-                self.define(id, rhs);
-                self.traverse_expr(rhs)?;
-            }
-            Stmt::Assignment(lhs, rhs) => {
-                self.traverse_expr(lhs)?;
-                self.traverse_expr(rhs)?;
-            }
-            Stmt::FunDecl(id, params, ret, body) => {
-                // TODO: Add function to some type of table, return type of such
-                // TODO: Define parameters in their scope
-                // TODO: Traverse body
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    pub fn traverse_expr(&mut self, expr: &ExprNode) -> Result<(), &'static str> {
-        match &*expr.expr {
-            Expr::Identifier(id) => {
-                self.lookup_var(id).ok_or_else(|| {
-                    eprintln!("Couldn't find: {}", id);
-                    "No variable declaration"
-                })?;
-            }
-            _ => {}
-        }
-        Ok(())
+impl Visitor for Scope {
+    fn visit_expr(&mut self, e: &ExprNode) {
+        println!("Hey this is a custom scope operator");
+        walk_expr(self, e);
     }
 }
 
-pub fn scope(stmt: Stmt) -> Result<Stmt, &'static str> {
+pub fn define_scope(stmt: Stmt) -> Result<Stmt, &'static str> {
     let mut scope = Scope::new_root();
-    scope.traverse_stmt(&stmt)?;
+    scope.visit_stmt(&stmt);
     Ok(stmt)
 }

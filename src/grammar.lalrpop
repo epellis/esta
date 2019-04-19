@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Opcode, Literal, Stmt, ExprNode, Type};
+use crate::frontend::ast::{Expr, Opcode, Literal, Stmt, ExprNode, Type};
 use std::str::FromStr;
 
 grammar;
@@ -30,6 +30,7 @@ Stmt: Box<Stmt> = {
         Box::new(Stmt::If(cond,
             Box::new(Stmt::Block(stmts)),
             Box::new(Stmt::Block(Vec::new()))))},
+    // TODO: Synthesize while loop from for loop
     "for" <init:DeclStmt?> ";" <test:Expr?> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         Box::new(Stmt::For(init, test, increment,
             Box::new(Stmt::Block(body))))},
@@ -46,9 +47,7 @@ Stmt: Box<Stmt> = {
             Type::Nil,
     Box::new(Stmt::Block(body))))},
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
-    "break" ";" => Box::new(Stmt::Break),
-    "continue" ";" => Box::new(Stmt::Continue),
-    <proc:FuncExpr> ";" => Box::new(Stmt::ImpureCall(proc)),
+    <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(ExprNode::new_nil(), proc)),
 };
 
 DeclStmt: Box<Stmt> = {

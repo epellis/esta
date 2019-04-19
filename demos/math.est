@@ -1,1 +1,3 @@
-var a = 1 + 1;
+fun add(a, b, c) {
+    return a + b + c;
+}
