@@ -100,6 +100,7 @@ impl VirtualMachine {
                     self.pc = curr.data.unwrap() as usize;
                 }
                 ByteCode::HALT => return Ok(()),
+                _ => return Ok(()),
             }
         }
     }

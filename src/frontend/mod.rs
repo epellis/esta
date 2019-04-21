@@ -1,6 +1,6 @@
 pub mod ast;
 mod scope;
-mod visitor;
+pub mod visitor;
 
 use self::ast::Stmt;
 
@@ -13,7 +13,7 @@ pub fn run(input: &str) -> Result<Stmt, &'static str> {
         .parse(input)
         .map_err(|_| "Parsing Error")?;
     let stmts = Stmt::Block(stmts);
-    let stmts = scope::define_scope(stmts)?;
+    let stmts = scope::discover_scope(stmts)?;
     println!("{}", stmts);
     Ok(stmts)
 }

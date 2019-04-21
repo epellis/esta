@@ -1,4 +1,4 @@
-use super::visitor::{walk_expr, walk_stmt, Visitor};
+use super::visitor::{walk_expr, walk_stmt, VisitResult, Visitor};
 use crate::frontend::ast::{Expr, ExprNode, Stmt};
 use std::collections::HashMap;
 use std::fmt;
@@ -12,7 +12,7 @@ pub struct Scope {
     enclosures: Vec<HashMap<String, ExprNode>>,
 }
 
-pub fn define_scope(stmt: Stmt) -> Result<Stmt, &'static str> {
+pub fn discover_scope(stmt: Stmt) -> Result<Stmt, &'static str> {
     let mut scope = Scope::new_root();
     scope.visit_stmt(&stmt);
     Ok(stmt)
@@ -33,6 +33,7 @@ impl Scope {
     }
 
     pub fn define(&mut self, id: &str, val: &ExprNode) {
+        // TODO: Find a less destructive way of pushing to the upper stack
         let mut top = self.enclosures.pop().expect("popped the global stack");
         top.insert(id.to_string(), val.clone());
         self.enclosures.push(top);
@@ -52,8 +53,8 @@ impl Scope {
     }
 }
 
-impl Visitor for Scope {
-    fn visit_stmt(&mut self, s: &Stmt) {
+impl Visitor<()> for Scope {
+    fn visit_stmt(&mut self, s: &Stmt) -> VisitResult<()> {
         match s {
             Stmt::Block(_) => {
                 self.push_level();
@@ -76,9 +77,10 @@ impl Visitor for Scope {
             }
             _ => walk_stmt(self, s),
         }
+        Ok(())
     }
 
-    fn visit_expr(&mut self, e: &ExprNode) {
+    fn visit_expr(&mut self, e: &ExprNode) -> VisitResult<()> {
         match &*e.expr {
             Expr::Identifier(id) => {
                 self.lookup_var(id)
@@ -87,12 +89,24 @@ impl Visitor for Scope {
             _ => walk_expr(self, e),
         }
         walk_expr(self, e);
+        Ok(())
     }
 }
 
-/// Quick way to print any level in the enclosure stack. Great for debugging
+// Quick way to print any level in the enclosure stack. Great for debugging
 fn level_to_string(level: &HashMap<String, ExprNode>) -> String {
     let pairs: Vec<String> = level.iter().map(|(k, v)| format!("{}->{}", k, v)).collect();
     let pairs = pairs.join(", ");
     pairs
 }
+
+#[derive(TypeError)]
+struct TypeError;
+
+impl fmt::Display for StackError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "stack empty")
+    }
+}
+
+impl error::Error for StackError {}

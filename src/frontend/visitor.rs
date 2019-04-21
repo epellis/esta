@@ -1,5 +1,7 @@
 use super::ast::*;
 
+pub type VisitResult<T> = ::std::result::Result<T, Box<::std::error::Error>>;
+
 /// Visitor Pattern
 /// Inspired by RustC MIR Project
 ///
@@ -7,12 +9,13 @@ use super::ast::*;
 /// AST is walked. This means that when new walks of the AST are done, the
 /// specific walk only needs to modify functions specific to itself.
 /// TODO: Implement some generic error handling return type
-pub trait Visitor {
-    fn visit_stmt(&mut self, s: &Stmt);
-    fn visit_expr(&mut self, e: &ExprNode);
+pub trait Visitor<T> {
+    fn visit_stmt(&mut self, s: &Stmt) -> VisitResult<T>;
+    fn visit_expr(&mut self, e: &ExprNode) -> VisitResult<T>;
 }
 
-pub fn walk_stmt<V: ?Sized + Visitor>(v: &mut V, s: &Stmt) {
+// TODO: WalkStmt/Expr need to have error handling/passing abilities
+pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) -> VisitResult<T> {
     match s {
         Stmt::Block(stmts) => {
             for stmt in stmts {
@@ -50,7 +53,7 @@ pub fn walk_stmt<V: ?Sized + Visitor>(v: &mut V, s: &Stmt) {
     }
 }
 
-pub fn walk_expr<V: ?Sized + Visitor>(v: &mut V, e: &ExprNode) {
+pub fn walk_expr<T, V: ?Sized + Visitor<T>>(v: &mut V, e: &ExprNode) -> VisitResult<T> {
     match &*e.expr {
         Expr::Identifier(id) => {}
         Expr::Literal(literal) => {}
@@ -62,7 +65,9 @@ pub fn walk_expr<V: ?Sized + Visitor>(v: &mut V, e: &ExprNode) {
             v.visit_expr(rhs);
         }
         Expr::FunCall(id, params) => {
-            // TODO: Should we walk params?
+            for param in params {
+                v.visit_expr(param);
+            }
         }
     }
 }
