@@ -1,6 +1,6 @@
 use super::ast::*;
 
-pub type VisitResult<T> = ::std::result::Result<T, Box<::std::error::Error>>;
+//pub type VisitResult<T> = ::std::result::Result<T, Box<::std::error::Error>>;
 
 /// Visitor Pattern
 /// Inspired by RustC MIR Project
@@ -10,12 +10,12 @@ pub type VisitResult<T> = ::std::result::Result<T, Box<::std::error::Error>>;
 /// specific walk only needs to modify functions specific to itself.
 /// TODO: Implement some generic error handling return type
 pub trait Visitor<T> {
-    fn visit_stmt(&mut self, s: &Stmt) -> VisitResult<T>;
-    fn visit_expr(&mut self, e: &ExprNode) -> VisitResult<T>;
+    fn visit_stmt(&mut self, s: &Stmt);
+    fn visit_expr(&mut self, e: &ExprNode);
 }
 
 // TODO: WalkStmt/Expr need to have error handling/passing abilities
-pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) -> VisitResult<T> {
+pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) {
     match s {
         Stmt::Block(stmts) => {
             for stmt in stmts {
@@ -53,7 +53,7 @@ pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) -> VisitResult<
     }
 }
 
-pub fn walk_expr<T, V: ?Sized + Visitor<T>>(v: &mut V, e: &ExprNode) -> VisitResult<T> {
+pub fn walk_expr<T, V: ?Sized + Visitor<T>>(v: &mut V, e: &ExprNode) {
     match &*e.expr {
         Expr::Identifier(id) => {}
         Expr::Literal(literal) => {}

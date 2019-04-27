@@ -1,7 +1,7 @@
-use super::visitor::{walk_expr, walk_stmt, VisitResult, Visitor};
+use super::visitor::{walk_expr, walk_stmt, Visitor};
 use crate::frontend::ast::{Expr, ExprNode, Stmt};
 use std::collections::HashMap;
-use std::fmt;
+use std::{error, fmt};
 
 /// Scope Checker
 ///
@@ -54,7 +54,7 @@ impl Scope {
 }
 
 impl Visitor<()> for Scope {
-    fn visit_stmt(&mut self, s: &Stmt) -> VisitResult<()> {
+    fn visit_stmt(&mut self, s: &Stmt) {
         match s {
             Stmt::Block(_) => {
                 self.push_level();
@@ -77,10 +77,9 @@ impl Visitor<()> for Scope {
             }
             _ => walk_stmt(self, s),
         }
-        Ok(())
     }
 
-    fn visit_expr(&mut self, e: &ExprNode) -> VisitResult<()> {
+    fn visit_expr(&mut self, e: &ExprNode) {
         match &*e.expr {
             Expr::Identifier(id) => {
                 self.lookup_var(id)
@@ -89,7 +88,6 @@ impl Visitor<()> for Scope {
             _ => walk_expr(self, e),
         }
         walk_expr(self, e);
-        Ok(())
     }
 }
 
@@ -100,13 +98,13 @@ fn level_to_string(level: &HashMap<String, ExprNode>) -> String {
     pairs
 }
 
-#[derive(TypeError)]
+#[derive(Debug)]
 struct TypeError;
 
-impl fmt::Display for StackError {
+impl fmt::Display for TypeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "stack empty")
     }
 }
 
-impl error::Error for StackError {}
+impl error::Error for TypeError {}

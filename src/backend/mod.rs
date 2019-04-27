@@ -1,7 +1,6 @@
 use crate::frontend::ast::{Expr, ExprNode, Stmt};
-use crate::frontend::visitor::{walk_expr, walk_stmt, VisitResult, Visitor};
-use std::error;
-use std::fmt;
+use crate::frontend::visitor::{walk_expr, walk_stmt, Visitor};
+use std::{error, fmt};
 
 pub fn generate(stmts: Stmt) -> Result<(), &'static str> {
     let mut assembler = Assembler::new();
@@ -15,19 +14,19 @@ impl Assembler {
         Assembler {}
     }
 
-    pub fn assemble(&mut self, stmt: &Stmt) -> VisitResult<()> {
-        self.visit_stmt(stmt)
+    pub fn assemble(&mut self, stmt: &Stmt) -> Result<(), ()> {
+        self.visit_stmt(stmt);
+        Ok(())
     }
 }
 
 impl Visitor<()> for Assembler {
-    fn visit_stmt(&mut self, s: &Stmt) -> VisitResult<()> {
+    fn visit_stmt(&mut self, s: &Stmt) {
         println!("Assembling harder!");
         walk_stmt(self, s);
-        Ok(())
     }
 
-    fn visit_expr(&mut self, e: &ExprNode) -> VisitResult<()> {
+    fn visit_expr(&mut self, e: &ExprNode) {
         match &*e.expr {
             Expr::BinaryOp(lhs, op, rhs) => {
                 walk_expr(self, lhs);
@@ -37,7 +36,6 @@ impl Visitor<()> for Assembler {
             _ => {}
         }
         walk_expr(self, e);
-        Ok(())
     }
 }
 
