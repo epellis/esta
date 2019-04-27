@@ -1,5 +1,6 @@
 pub enum ByteCode {
     LOADC, // Push a value to the stack
+    LOAD,  // Push a value at address specified in top of address to stack
     HALT,  // Stop the VM from executing
     ADD,   // Add the top two items on the stack and push the result
     SUB,   // Subtract the top two items on the stack and push the result

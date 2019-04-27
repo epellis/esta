@@ -3,7 +3,7 @@ pub mod bytecode;
 extern crate num_traits;
 
 use self::bytecode::{ByteCode, Inst};
-use num_traits::{CheckedNeg, Num, One, Zero};
+use num_traits::{cast::ToPrimitive, CheckedNeg, Num, One, Zero};
 use std::cmp::PartialOrd;
 
 /// The Esta Virtual Machine
@@ -17,7 +17,7 @@ pub struct VirtualMachine<T> {
 }
 
 #[allow(dead_code)]
-impl<T: Num + Clone + PartialOrd + CheckedNeg> VirtualMachine<T> {
+impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive> VirtualMachine<T> {
     pub fn new(inst: Vec<Inst<T>>) -> VirtualMachine<T> {
         VirtualMachine {
             stack: Vec::new(),
@@ -33,8 +33,12 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg> VirtualMachine<T> {
             let ir = &self.inst[self.pc];
             self.pc += 1;
             match ir.inst {
-                ByteCode::HALT => return Ok(()),
                 ByteCode::LOADC => self.push(ir.data.clone().unwrap()),
+                ByteCode::LOAD => {
+                    let addr: usize = self.top()?.to_usize().unwrap();
+                    self.push(self.stack[addr].clone());
+                }
+                ByteCode::HALT => return Ok(()),
                 ByteCode::ADD => {
                     let res = self.pop()? + self.pop()?;
                     self.push(res);
@@ -155,6 +159,19 @@ mod tests {
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
         assert_eq!(&[0].to_vec(), vm.debug_stack());
+    }
+
+    #[test]
+    fn test_load() {
+        let instructions: Vec<Inst<i64>> = vec![
+            Inst::new_data(ByteCode::LOADC, 2),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::LOAD),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[2, 0, 2].to_vec(), vm.debug_stack());
     }
 
     #[test]
