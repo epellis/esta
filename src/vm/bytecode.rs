@@ -1,24 +1,21 @@
 pub enum ByteCode {
-    LOADC, //
-    PUSH,  // Push a value to the top of the stack
-    POP,   // Pop a value off the top of the stack
-    ADD,   // Add the top two values and push it to the stack
-    SUB,   // Subtract the top two values and push it to the stack
-    MUL,   // Multiply the top two values and push it to the stack
-    DIV,   // Divide the top two values and push it to the stack
-    AND,   // And the top two values and push it to the stack
-    OR,    // Or the top two values and push it to the stack
-    EQ,    // Compare the top two values and push it to the stack
-    NEQ,   // Compare the top two values and push it to the stack
-    GT,    // Compare the top two values and push it to the stack
-    GTE,   // Compare the top two values and push it to the stack
-    LT,    // Compare the top two values and push it to the stack
-    LTE,   // Compare the top two values and push it to the stack
-    STR,   // Pop the top of the stack and store it in the provided index
-    LD,    // Load an item from the provided index and push it to the stack
-    BRT,   // Branch to the instruction specified if the top of the stack is 1
-    JMP,   // Jump to the instruction specified
+    LOADC, // Push a value to the stack
     HALT,  // Stop the VM from executing
+    ADD,   // Add the top two items on the stack and push the result
+    SUB,   // Subtract the top two items on the stack and push the result
+    MUL,   // Multiply the top two items on the stack and push the result
+    DIV,   // Divide the top two items on the stack and push the result
+    MOD,   // Modulo's the top two items on the stack and push the result
+    AND,   // Logical AND's the top two items on the stack and push the result
+    OR,    // Logical OR's the top two items on the stack and push the result
+    EQ,    // Checks if the top two items on the stack equal each other and push result
+    NEQ,   // Checks if the top two items on the stack do not equal each other and push result
+    LE,    // Checks if the first item on the stack is less than the second item and push result
+    LEQ, // Checks if the first item on the stack is less than or equal the second item and push result
+    GE,  // Checks if the first item on the stack is greater than the second item and push result
+    GEQ, // Checks if the first item on the stack is greater than or equal the second item and push result
+    NEG, // Replace the top of the stack with it's negative
+    NOT, // Replace the top of the stack with it's opposite
 }
 
 #[allow(dead_code)]

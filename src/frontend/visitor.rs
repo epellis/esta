@@ -8,7 +8,6 @@ use super::ast::*;
 /// The Visitor Pattern allows for a default behaviour to be defined when the
 /// AST is walked. This means that when new walks of the AST are done, the
 /// specific walk only needs to modify functions specific to itself.
-/// TODO: Implement some generic error handling return type
 pub trait Visitor<T> {
     fn visit_stmt(&mut self, s: &Stmt);
     fn visit_expr(&mut self, e: &ExprNode);

@@ -68,6 +68,7 @@ pub enum Type {
 /// Opcodes
 ///
 /// Opcodes are fundamental operations on (usually) two operands
+/// TODO: Add Modulo %
 #[derive(Clone)]
 pub enum Opcode {
     // Mathematics

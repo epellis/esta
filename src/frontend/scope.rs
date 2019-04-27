@@ -83,7 +83,8 @@ impl Visitor<()> for Scope {
         match &*e.expr {
             Expr::Identifier(id) => {
                 self.lookup_var(id)
-                    .ok_or_else(|| println!("{} could not be found", id));
+                    .ok_or_else(|| println!("{} could not be found", id))
+                    .unwrap();
             }
             _ => walk_expr(self, e),
         }
