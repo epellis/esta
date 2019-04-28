@@ -12,7 +12,10 @@ extern crate lazy_static;
 pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = frontend::run(input)?;
     let inst = backend::generate(stmts)?;
-    println!("{:?}", inst);
-    //    let mut vm = vm::VirtualMachine::new();
+    for i in &inst {
+        println!("{}", i);
+    }
+    let mut vm = vm::VirtualMachine::new(inst);
+    vm.run()?;
     Ok(())
 }

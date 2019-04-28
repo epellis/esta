@@ -1,11 +1,15 @@
 use crate::frontend::ast::Opcode;
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ByteCode {
     LOADC, // Push a value to the stack
     LOAD,  // Push a value at address specified in top of address to stack
     STORE, // Overwrite a value at address specified in top of stack
+    POP,   // Pop the top element off the stack
+    JUMP,  // Change the PC to a new value
+    JUMPZ, // Change the PC to a new value if the top of stack is zero
     HALT,  // Stop the VM from executing
     ADD,   // Add the top two items on the stack and push the result
     SUB,   // Subtract the top two items on the stack and push the result
@@ -59,5 +63,14 @@ impl<T> Inst<T> {
     }
     pub fn new_inst(inst: ByteCode) -> Inst<T> {
         Inst { inst, data: None }
+    }
+}
+
+impl<T: fmt::Debug> fmt::Display for Inst<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.data {
+            Some(data) => write!(f, "{:?} {:?}", self.inst, data),
+            None => write!(f, "{:?}", self.inst),
+        }
     }
 }

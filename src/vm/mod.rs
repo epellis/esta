@@ -5,9 +5,9 @@ extern crate num_traits;
 use self::bytecode::{ByteCode, Inst};
 use num_traits::{cast::ToPrimitive, CheckedNeg, Num, One, Zero};
 use std::cmp::PartialOrd;
+use std::fmt::Debug;
 
 /// The Esta Virtual Machine
-#[allow(dead_code)]
 pub struct VirtualMachine<T> {
     stack: Vec<T>,
     mem: Vec<T>,
@@ -16,8 +16,7 @@ pub struct VirtualMachine<T> {
     pc: usize,
 }
 
-#[allow(dead_code)]
-impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive> VirtualMachine<T> {
+impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive + Debug> VirtualMachine<T> {
     pub fn new(inst: Vec<Inst<T>>) -> VirtualMachine<T> {
         VirtualMachine {
             stack: Vec::new(),
@@ -32,17 +31,36 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive> VirtualMachine<T> {
         loop {
             let ir = &self.inst[self.pc];
             self.pc += 1;
+
+            println!("{}\t{:?}\t{:?}", ir, &self.stack, &self.mem);
+
             match ir.inst {
                 ByteCode::LOADC => self.push(ir.data.clone().unwrap()),
                 ByteCode::LOAD => {
-                    let addr: usize = self.top()?.to_usize().unwrap();
-                    self.push(self.stack[addr].clone());
+                    let addr: usize = self.pop()?.to_usize().unwrap();
+                    self.push(self.mem[addr].clone());
                 }
                 ByteCode::STORE => {
                     let addr: usize = self.pop()?.to_usize().unwrap();
-                    self.stack[addr] = self.top()?.clone();
+                    self.mem.resize(addr + 1, Zero::zero());
+                    self.mem[addr] = self.top()?.clone();
                 }
-                ByteCode::HALT => return Ok(()),
+                ByteCode::POP => {
+                    self.pop()?;
+                }
+                ByteCode::JUMP => {
+                    self.pc = ir.data.clone().unwrap().to_usize().unwrap();
+                }
+                ByteCode::JUMPZ => {
+                    let new_pc = ir.data.clone().unwrap().to_usize().unwrap();
+                    if self.pop()? == Zero::zero() {
+                        self.pc = new_pc;
+                    }
+                }
+                ByteCode::HALT => {
+                    println!("");
+                    return Ok(());
+                }
                 ByteCode::ADD => {
                     let res = self.pop()? + self.pop()?;
                     self.push(res);
@@ -189,6 +207,46 @@ mod tests {
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
         assert_eq!(&[2].to_vec(), vm.debug_stack());
+    }
+
+    #[test]
+    fn test_pop() {
+        let instructions: Vec<Inst<i64>> = vec![
+            Inst::new_data(ByteCode::LOADC, 2),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::POP),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[2].to_vec(), vm.debug_stack());
+    }
+
+    #[test]
+    fn test_jump() {
+        let instructions: Vec<Inst<i64>> = vec![
+            Inst::new_data(ByteCode::LOADC, 1),
+            Inst::new_data(ByteCode::JUMP, 3),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[1].to_vec(), vm.debug_stack());
+    }
+
+    #[test]
+    fn test_jumpz() {
+        let instructions: Vec<Inst<i64>> = vec![
+            Inst::new_data(ByteCode::LOADC, 1),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_data(ByteCode::JUMPZ, 4),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[1].to_vec(), vm.debug_stack());
     }
 
     #[test]

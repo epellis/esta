@@ -98,14 +98,3 @@ fn level_to_string(level: &HashMap<String, ExprNode>) -> String {
     let pairs = pairs.join(", ");
     pairs
 }
-
-#[derive(Debug)]
-struct TypeError;
-
-impl fmt::Display for TypeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "stack empty")
-    }
-}
-
-impl error::Error for TypeError {}

@@ -1,5 +1,5 @@
 pub mod ast;
-mod scope;
+pub mod scope;
 pub mod visitor;
 
 use self::ast::Stmt;

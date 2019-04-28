@@ -1,3 +1,6 @@
+mod allocator;
+
+use self::allocator::Allocator;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt};
 use crate::frontend::visitor::{walk_expr, walk_stmt, Visitor};
 use crate::vm::bytecode::{ByteCode, Inst, OP_TO_BYTE};
@@ -10,12 +13,14 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst<i64>>, &'static str> {
     assembler
         .assemble(&stmts)
         .map_err(|_| "Couldn't Assemble")?;
+    assembler.inst.push(Inst::new_inst(ByteCode::HALT));
     Ok(assembler.inst)
 }
 
 pub struct Assembler {
     inst: Vec<Inst<i64>>,
     rho: usize,
+    alloc: Allocator,
 }
 
 impl Assembler {
@@ -23,6 +28,7 @@ impl Assembler {
         Assembler {
             inst: Vec::new(),
             rho: 0,
+            alloc: Allocator::new(),
         }
     }
 
@@ -30,24 +36,72 @@ impl Assembler {
         self.visit_stmt(stmt);
         Ok(())
     }
+
+    pub fn l_value(&mut self, lhs: &ExprNode) -> i64 {
+        match &*lhs.expr {
+            Expr::Identifier(id) => {
+                if let Some((rho, offset)) = self.alloc.lookup(id) {
+                    return rho as i64 + offset as i64;
+                }
+                0
+            }
+            _ => 0,
+        }
+    }
 }
 
 impl Visitor<()> for Assembler {
     fn visit_stmt(&mut self, s: &Stmt) {
-        walk_stmt(self, s);
+        match s {
+            Stmt::Block(_) => {
+                self.alloc.push_level();
+                walk_stmt(self, s);
+                self.alloc.pop_level();
+            }
+            Stmt::Declaration(id, rhs) => {
+                self.visit_expr(rhs);
+                self.alloc.define(id, rhs);
+                if let Some((rho, offset)) = self.alloc.lookup(id) {
+                    let offset: i64 = rho as i64 + offset as i64;
+                    self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
+                }
+                self.inst.push(Inst::new_inst(ByteCode::STORE));
+            }
+            Stmt::Assignment(lhs, rhs) => {
+                // Evaluate RHS
+                self.visit_expr(rhs);
+                let offset = self.l_value(lhs);
+                self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
+                self.inst.push(Inst::new_inst(ByteCode::STORE));
+            }
+            _ => {
+                walk_stmt(self, s);
+            }
+        }
     }
 
     fn visit_expr(&mut self, e: &ExprNode) {
         walk_expr(self, e);
         match &*e.expr {
-            Expr::BinaryOp(lhs, op, rhs) => {
-                //                walk_expr(self, lhs);
-                //                walk_expr(self, rhs);
+            Expr::BinaryOp(_, op, _) => {
                 let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
                 self.inst.push(Inst::new_inst(bytecode));
             }
+            Expr::UnaryOp(op, _) => {
+                // TODO: Deal with ambiguity of minus operator
+                let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
+                self.inst.push(Inst::new_inst(bytecode));
+            }
+            Expr::Identifier(id) => match self.alloc.lookup(id) {
+                Some((rho, offset)) => {
+                    let offset: i64 = rho as i64 + offset as i64;
+                    self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
+                    self.inst.push(Inst::new_inst(ByteCode::LOAD));
+                }
+                None => panic!("Could not find id"),
+            },
             Expr::Literal(value) => {
-                // TODO: Handle String and Float
+                // TODO: Handle String and Nil
                 match value {
                     Literal::Number(value) => {
                         self.inst.push(Inst::new_data(ByteCode::LOADC, *value));
@@ -59,7 +113,7 @@ impl Visitor<()> for Assembler {
                     _ => {}
                 }
             }
-            _ => {}
+            _ => println!("Couldn't match {}", &*e.expr),
         }
     }
 }
