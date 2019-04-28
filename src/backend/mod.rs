@@ -43,9 +43,9 @@ impl Assembler {
                 if let Some((rho, offset)) = self.alloc.lookup(id) {
                     return rho as i64 + offset as i64;
                 }
-                0
+                -1
             }
-            _ => 0,
+            _ => -1,
         }
     }
 }
@@ -68,11 +68,23 @@ impl Visitor<()> for Assembler {
                 self.inst.push(Inst::new_inst(ByteCode::STORE));
             }
             Stmt::Assignment(lhs, rhs) => {
-                // Evaluate RHS
                 self.visit_expr(rhs);
                 let offset = self.l_value(lhs);
                 self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
                 self.inst.push(Inst::new_inst(ByteCode::STORE));
+            }
+            Stmt::If(cond, stmt, alt) => {
+                self.visit_expr(cond);
+                let jump_a = self.inst.len();
+                self.inst.push(Inst::new_data(ByteCode::JUMPZ, -1));
+                self.visit_stmt(stmt);
+                let jump_b = self.inst.len();
+                self.inst.push(Inst::new_data(ByteCode::JUMP, -1));
+                self.visit_stmt(alt);
+
+                // Now retroactively edit the jump locations
+                self.inst[jump_a] = Inst::new_data(ByteCode::JUMPZ, jump_b as i64);
+                self.inst[jump_b] = Inst::new_data(ByteCode::JUMPZ, self.inst.len() as i64);
             }
             _ => {
                 walk_stmt(self, s);

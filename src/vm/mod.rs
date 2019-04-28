@@ -32,7 +32,7 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive + Debug> VirtualMach
             let ir = &self.inst[self.pc];
             self.pc += 1;
 
-            println!("{}\t{:?}\t{:?}", ir, &self.stack, &self.mem);
+            println!("{} {}\t{:?}\t{:?}", self.pc, ir, &self.stack, &self.mem);
 
             match ir.inst {
                 ByteCode::LOADC => self.push(ir.data.clone().unwrap()),
@@ -144,10 +144,6 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive + Debug> VirtualMach
         Ok(self.data.clone())
     }
 
-    pub fn debug_stack(&self) -> &Vec<T> {
-        &self.stack
-    }
-
     pub fn bool_to_t(cond: bool) -> T {
         match cond {
             true => One::one(),
@@ -180,7 +176,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[0].to_vec(), vm.debug_stack());
+        assert_eq!(&[0].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -188,12 +184,15 @@ mod tests {
         let instructions: Vec<Inst<i64>> = vec![
             Inst::new_data(ByteCode::LOADC, 2),
             Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::STORE),
+            Inst::new_data(ByteCode::LOADC, 0),
             Inst::new_inst(ByteCode::LOAD),
             Inst::new_inst(ByteCode::HALT),
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[2, 0, 2].to_vec(), vm.debug_stack());
+        assert_eq!(&[2, 2].to_vec(), &vm.stack);
+        assert_eq!(&[2].to_vec(), &vm.mem);
     }
 
     #[test]
@@ -206,7 +205,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[2].to_vec(), vm.debug_stack());
+        assert_eq!(&[2].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -219,7 +218,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[2].to_vec(), vm.debug_stack());
+        assert_eq!(&[2].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -232,7 +231,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -246,7 +245,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -259,7 +258,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[4].to_vec(), vm.debug_stack());
+        assert_eq!(&[4].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -272,7 +271,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[0].to_vec(), vm.debug_stack());
+        assert_eq!(&[0].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -285,7 +284,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[4].to_vec(), vm.debug_stack());
+        assert_eq!(&[4].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -298,7 +297,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -311,7 +310,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[0].to_vec(), vm.debug_stack());
+        assert_eq!(&[0].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -324,7 +323,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -337,7 +336,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -350,7 +349,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[0].to_vec(), vm.debug_stack());
+        assert_eq!(&[0].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -363,7 +362,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -376,7 +375,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[1].to_vec(), vm.debug_stack());
+        assert_eq!(&[1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -388,7 +387,7 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[-1].to_vec(), vm.debug_stack());
+        assert_eq!(&[-1].to_vec(), &vm.stack);
     }
 
     #[test]
@@ -400,6 +399,6 @@ mod tests {
         ];
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
-        assert_eq!(&[0].to_vec(), vm.debug_stack());
+        assert_eq!(&[0].to_vec(), &vm.stack);
     }
 }
