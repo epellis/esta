@@ -50,7 +50,7 @@ pub enum Expr {
 /// Literal Enums are values that are known at compile time
 #[derive(Clone)]
 pub enum Literal {
-    Number(i32),
+    Number(i64),
     Boolean(bool),
     String(String),
     Nil,
@@ -69,7 +69,7 @@ pub enum Type {
 ///
 /// Opcodes are fundamental operations on (usually) two operands
 /// TODO: Add Modulo %
-#[derive(Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Opcode {
     // Mathematics
     Add,
@@ -96,6 +96,7 @@ impl ExprNode {
             type_of: Type::Nil,
         }
     }
+
     /// Create a new expression with an indeterminate type
     ///
     /// This function will attempt to find the type by searching it's children
@@ -107,18 +108,21 @@ impl ExprNode {
             type_of,
         }
     }
+
     pub fn new_typed(expr: Expr, type_of: Type) -> ExprNode {
         ExprNode {
             expr: Box::new(expr),
             type_of,
         }
     }
+
     pub fn new_nil() -> ExprNode {
         ExprNode {
             expr: Box::new(Expr::Literal(Literal::Nil)),
             type_of: Type::Nil,
         }
     }
+
     pub fn identify(&self) -> String {
         match &*self.expr {
             Expr::Identifier(identity) => identity.clone(),

@@ -38,6 +38,10 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive> VirtualMachine<T> {
                     let addr: usize = self.top()?.to_usize().unwrap();
                     self.push(self.stack[addr].clone());
                 }
+                ByteCode::STORE => {
+                    let addr: usize = self.pop()?.to_usize().unwrap();
+                    self.stack[addr] = self.top()?.clone();
+                }
                 ByteCode::HALT => return Ok(()),
                 ByteCode::ADD => {
                     let res = self.pop()? + self.pop()?;
@@ -126,14 +130,14 @@ impl<T: Num + Clone + PartialOrd + CheckedNeg + ToPrimitive> VirtualMachine<T> {
         &self.stack
     }
 
-    fn bool_to_t(cond: bool) -> T {
+    pub fn bool_to_t(cond: bool) -> T {
         match cond {
             true => One::one(),
             false => Zero::zero(),
         }
     }
 
-    fn t_to_bool(cond: T) -> bool {
+    pub fn t_to_bool(cond: T) -> bool {
         cond == One::one()
     }
 }
@@ -172,6 +176,19 @@ mod tests {
         let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
         assert_eq!(&[2, 0, 2].to_vec(), vm.debug_stack());
+    }
+
+    #[test]
+    fn test_store() {
+        let instructions: Vec<Inst<i64>> = vec![
+            Inst::new_data(ByteCode::LOADC, 2),
+            Inst::new_data(ByteCode::LOADC, 0),
+            Inst::new_inst(ByteCode::STORE),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine<i64> = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[2].to_vec(), vm.debug_stack());
     }
 
     #[test]

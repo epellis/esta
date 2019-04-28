@@ -1,5 +1,7 @@
 # Esta
 
+[![Build Status](https://travis-ci.com/epellis/esta.svg?branch=master)](https://travis-ci.com/epellis/esta)
+
 Esta is a gradually typed, interpreted language of my own design written in Rust
 
 _Interpreted_: `.est` source code is compiled into byte code (simple assembly instructions)

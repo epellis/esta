@@ -141,8 +141,8 @@ Bool: bool = {
     "False" => false,
 };
 
-Num: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap(),
+Num: i64 = {
+    r"[0-9]+" => i64::from_str(<>).unwrap(),
 };
 
 LogicalOp: Opcode = {

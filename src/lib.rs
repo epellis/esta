@@ -6,9 +6,13 @@ pub mod vm;
 #[macro_use]
 extern crate lalrpop_util;
 
+#[macro_use]
+extern crate lazy_static;
+
 pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = frontend::run(input)?;
-    backend::generate(stmts)?;
+    let inst = backend::generate(stmts)?;
+    println!("{:?}", inst);
     //    let mut vm = vm::VirtualMachine::new();
     Ok(())
 }
