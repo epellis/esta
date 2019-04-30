@@ -6,6 +6,7 @@ use std::fmt;
 pub enum ByteCode {
     LOADC, // Push a value to the stack
     LOAD,  // Push a value at address specified in top of address to stack
+    LOADA, // LOADC followed by LOAD. For variable addresses
     STORE, // Overwrite a value at address specified in top of stack
     POP,   // Pop the top element off the stack
     NEW,   // Allocate space on the heap for an object the size of top of stack
@@ -30,7 +31,7 @@ pub enum ByteCode {
 }
 
 lazy_static! {
-    pub static ref OP_TO_BYTE: HashMap<Opcode, ByteCode> = {
+    pub static ref BIN_OP_TO_BYTE: HashMap<Opcode, ByteCode> = {
         let mut m = HashMap::new();
         m.insert(Opcode::Add, ByteCode::ADD);
         m.insert(Opcode::Sub, ByteCode::SUB);
@@ -44,7 +45,12 @@ lazy_static! {
         m.insert(Opcode::BangEqual, ByteCode::NEQ);
         m.insert(Opcode::And, ByteCode::AND);
         m.insert(Opcode::Or, ByteCode::OR);
+        m
+    };
+    pub static ref UN_OP_TO_BYTE: HashMap<Opcode, ByteCode> = {
+        let mut m = HashMap::new();
         m.insert(Opcode::Not, ByteCode::NOT);
+        m.insert(Opcode::Sub, ByteCode::NEG);
         m
     };
 }

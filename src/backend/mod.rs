@@ -3,7 +3,7 @@ mod allocator;
 use self::allocator::Allocator;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt};
 use crate::frontend::visitor::{walk_expr, walk_stmt, Visitor};
-use crate::vm::bytecode::{ByteCode, Inst, OP_TO_BYTE};
+use crate::vm::bytecode::{ByteCode, Inst, BIN_OP_TO_BYTE, UN_OP_TO_BYTE};
 use std::collections::HashMap;
 
 // TODO: Split off bool to t conversion funcs
@@ -16,9 +16,9 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
         .map_err(|_| "Couldn't Assemble")?;
 
     for (label, instructions) in &assembler.labels {
-        println!("===={}====", label);
+        println!("{}", label);
         for i in instructions {
-            println!("{}", i);
+            println!("\t{}", i);
         }
     }
     println!("");
@@ -82,7 +82,7 @@ impl Assembler {
     }
 
     fn next_label(&mut self) -> String {
-        let lbl = format!("{}{}", self.block, self.suffix);
+        let lbl = format!("{}_{}", self.block, self.suffix);
         self.suffix += 1;
         self.labels.insert(lbl.clone(), Vec::new());
         lbl
@@ -91,7 +91,8 @@ impl Assembler {
     pub fn l_value(&mut self, lhs: &ExprNode) -> Vec<Inst> {
         let mut inst = Vec::new();
         if let Expr::Identifier(id) = &*lhs.expr {
-            let offset = self.alloc.lookup(id).map_or(-1, |x| x as i64);
+            let offset = self.alloc.lookup(id).map_or(0, |x| x);
+            let offset = self.rho as i64 + offset as i64;
             inst.push(Inst::new_data(ByteCode::LOADC, offset));
         }
         inst
@@ -124,7 +125,14 @@ impl Assembler {
                 let mut inst = Vec::new();
                 inst.extend(self.r_value(lhs));
                 inst.extend(self.r_value(rhs));
-                let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
+                let bytecode: ByteCode = BIN_OP_TO_BYTE.get(op).unwrap().clone();
+                inst.push(Inst::new_inst(bytecode));
+                inst
+            }
+            Expr::UnaryOp(op, rhs) => {
+                let mut inst = Vec::new();
+                inst.extend(self.r_value(rhs));
+                let bytecode: ByteCode = UN_OP_TO_BYTE.get(op).unwrap().clone();
                 inst.push(Inst::new_inst(bytecode));
                 inst
             }
@@ -137,9 +145,11 @@ impl Visitor<()> for Assembler {
     fn visit_stmt(&mut self, s: &Stmt) {
         match s {
             Stmt::Block(_) => {
-                self.alloc.push_level();
+                //                self.rho = self.alloc.stack_top();
+                self.alloc.push_level(self.alloc.stack_top());
                 walk_stmt(self, s);
                 self.alloc.pop_level();
+                //                self.rho = self.alloc.stack_top();
             }
             Stmt::Declaration(id, rhs) => {
                 let decl_block = self.r_value(rhs);
@@ -149,6 +159,7 @@ impl Visitor<()> for Assembler {
                 let offset = self.alloc.lookup(id).unwrap() as i64;
                 current_block.push(Inst::new_data(ByteCode::LOADC, offset));
                 current_block.push(Inst::new_inst(ByteCode::STORE));
+                current_block.push(Inst::new_inst(ByteCode::POP));
             }
             Stmt::Assignment(lhs, rhs) => {
                 let rhs = self.r_value(rhs);
@@ -157,6 +168,7 @@ impl Visitor<()> for Assembler {
                 current_block.extend(rhs);
                 current_block.extend(lhs);
                 current_block.push(Inst::new_inst(ByteCode::STORE));
+                current_block.push(Inst::new_inst(ByteCode::POP));
             }
             Stmt::If(cond, stmt, alt) => {
                 let parent_lbl = self.block.clone();
@@ -190,6 +202,9 @@ impl Visitor<()> for Assembler {
                 let cond_lbl = self.next_label();
                 let stmt_lbl = self.next_label();
                 let cont_lbl = self.next_label();
+
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_jump(ByteCode::JUMP, cond_lbl.clone()));
 
                 // Evaluate expr
                 self.block = cond_lbl.clone();

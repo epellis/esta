@@ -31,9 +31,21 @@ Stmt: Box<Stmt> = {
             Box::new(Stmt::Block(stmts)),
             Box::new(Stmt::Block(Vec::new()))))},
     // TODO: Synthesize while loop from for loop
-    "for" <init:DeclStmt?> ";" <test:Expr?> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
-        Box::new(Stmt::For(init, test, increment,
-            Box::new(Stmt::Block(body))))},
+    "for" <init:DeclStmt?> ";" <test:Expr> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
+        //        Box::new(Stmt::For(init, test, increment,
+        //            Box::new(Stmt::Block(body))))},
+        let mut block = Vec::new();
+        if init.is_some() {
+            block.push(init.unwrap());
+        }
+        let mut while_body = Vec::new();
+        if increment.is_some() {
+            while_body.push(increment.unwrap());
+        }
+        while_body.extend(body);
+        let while_block = Stmt::While(test, Box::new(Stmt::Block(while_body)));
+        block.push(Box::new(while_block));
+        Box::new(Stmt::Block(block))},
     "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "->" <ret:Type> "{" <body:Stmts> "}" => {
         Box::new(Stmt::FunDecl(
             name,

@@ -1,0 +1,8 @@
+var b = 0;
+for var a = 0; a < 10; a = a + 1; {
+    var d = 0;
+    for var c = 0; c < 10; c = c + 1; {
+        d = c;
+    }
+    b = b + d;
+}

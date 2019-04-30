@@ -43,9 +43,16 @@ impl VirtualMachine {
                     let addr: usize = self.pop()? as usize;
                     self.push(self.mem[addr].clone());
                 }
+                ByteCode::LOADA => {
+                    let addr: usize = ir.data.unwrap() as usize;
+                    self.push(self.mem[addr].clone());
+                }
                 ByteCode::STORE => {
                     let addr: usize = self.pop()? as usize;
-                    self.mem.resize(addr + 1, 0);
+
+                    if self.mem.len() <= addr {
+                        self.mem.resize(addr + 1, 0);
+                    }
                     self.mem[addr] = self.top()?.clone();
                 }
                 ByteCode::POP => {
@@ -75,16 +82,18 @@ impl VirtualMachine {
                     self.push(res);
                 }
                 ByteCode::SUB => {
-                    let res = self.pop()? - self.pop()?;
-                    self.push(res);
+                    let lhs = self.pop()?;
+                    let rhs = self.pop()?;
+                    self.push(rhs - lhs);
                 }
                 ByteCode::MUL => {
                     let res = self.pop()? * self.pop()?;
                     self.push(res);
                 }
                 ByteCode::DIV => {
-                    let res = self.pop()? / self.pop()?;
-                    self.push(res);
+                    let lhs = self.pop()?;
+                    let rhs = self.pop()?;
+                    self.push(rhs / lhs);
                 }
                 ByteCode::MOD => {
                     let res = self.pop()? % self.pop()?;

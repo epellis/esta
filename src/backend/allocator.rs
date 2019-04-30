@@ -8,13 +8,14 @@ struct StackInfo {
 }
 
 impl StackInfo {
-    pub fn new() -> StackInfo {
+    pub fn new(rho: usize) -> StackInfo {
         StackInfo {
-            top: 0,
+            top: rho,
             vars: HashMap::new(),
         }
     }
     pub fn define(&mut self, id: &str, val: &ExprNode) {
+        println!("Defining: {}:{}", id, self.top);
         self.vars.insert(id.to_string(), self.top);
         self.top += 1;
     }
@@ -39,12 +40,12 @@ pub struct Allocator {
 impl Allocator {
     pub fn new() -> Allocator {
         Allocator {
-            enclosures: vec![StackInfo::new()],
+            enclosures: vec![StackInfo::new(0)],
         }
     }
 
-    pub fn push_level(&mut self) {
-        self.enclosures.push(StackInfo::new());
+    pub fn push_level(&mut self, rho: usize) {
+        self.enclosures.push(StackInfo::new(rho));
     }
 
     pub fn pop_level(&mut self) {
@@ -64,5 +65,9 @@ impl Allocator {
             }
         }
         None
+    }
+
+    pub fn stack_top(&self) -> usize {
+        self.enclosures.last().unwrap().top
     }
 }
