@@ -25,17 +25,21 @@ impl VirtualMachine {
     }
 
     pub fn run(&mut self) -> Result<(), &'static str> {
+        let mut counter = 0;
+
         loop {
             let ir = &self.inst[self.pc];
             self.pc += 1;
 
             println!(
-                "{: >3} {: <8} {:?}\t{:?}",
+                "{: >4} {: >3} {: <8} {:?}\t{:?}",
+                counter,
                 self.pc,
                 format!("{}", ir),
                 &self.stack,
                 &self.mem
             );
+            counter += 1;
 
             match ir.inst {
                 ByteCode::LOADC => self.push(ir.data.clone().unwrap()),

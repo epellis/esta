@@ -65,6 +65,7 @@ impl Assembler {
         let start = self.labels.remove("START").unwrap();
         inst.extend(start);
 
+        // TODO: Maybe try to "chain" blocks together if they have an unconditional jump
         for (label, block) in &self.labels {
             label_locs.insert(label.clone(), inst.len());
             let block = block.clone();
