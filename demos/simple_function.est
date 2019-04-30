@@ -1,4 +1,4 @@
-fun foo(a, b) {
-    var c = a + b;
-    return c;
+fun foo(a) {
+    return a + 1;
 }
+var b = foo(9);

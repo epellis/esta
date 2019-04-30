@@ -8,6 +8,7 @@ pub enum ByteCode {
     LOAD,  // Push a value at address specified in top of address to stack
     STORE, // Overwrite a value at address specified in top of stack
     POP,   // Pop the top element off the stack
+    NEW,   // Allocate space on the heap for an object the size of top of stack
     JUMP,  // Change the PC to a new value
     JUMPZ, // Change the PC to a new value if the top of stack is zero
     HALT,  // Stop the VM from executing
@@ -48,29 +49,55 @@ lazy_static! {
     };
 }
 
-#[derive(Debug)]
-pub struct Inst<T> {
+#[derive(Debug, Clone)]
+pub struct Inst {
     pub inst: ByteCode,
-    pub data: Option<T>,
+    pub data: Option<i64>,
+    pub label: Option<String>,
 }
 
-impl<T> Inst<T> {
-    pub fn new_data(inst: ByteCode, data: T) -> Inst<T> {
+impl Inst {
+    pub fn new_data(inst: ByteCode, data: i64) -> Inst {
         Inst {
             inst,
             data: Some(data),
+            label: None,
         }
     }
-    pub fn new_inst(inst: ByteCode) -> Inst<T> {
-        Inst { inst, data: None }
+    pub fn new_inst(inst: ByteCode) -> Inst {
+        Inst {
+            inst,
+            data: None,
+            label: None,
+        }
+    }
+    pub fn new_jump(inst: ByteCode, label: String) -> Inst {
+        Inst {
+            inst,
+            data: None,
+            label: Some(label),
+        }
+    }
+    pub fn update_lbl(&self, label: &str, offset: i64) -> Inst {
+        if let Some(name) = &self.label {
+            if name == label {
+                return Inst::new_data(self.inst.clone(), offset);
+            }
+        }
+        self.clone()
     }
 }
 
-impl<T: fmt::Debug> fmt::Display for Inst<T> {
+impl fmt::Display for Inst {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.data {
-            Some(data) => write!(f, "{:?} {:?}", self.inst, data),
-            None => write!(f, "{:?}", self.inst),
+        match (&self.data, &self.label) {
+            (None, Some(l)) => write!(f, "{:?} {}", self.inst, l),
+            (Some(d), None) => write!(f, "{:?} {}", self.inst, d),
+            _ => write!(f, "{:?}", self.inst),
         }
+        //        match &self.data {
+        //            Some(data) => write!(f, "{:?} {:?}", self.inst, data),
+        //            None => write!(f, "{:?}", self.inst),
+        //        }
     }
 }

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 struct StackInfo {
-    rho: usize,
     top: usize,
     vars: HashMap<String, usize>,
 }
@@ -11,7 +10,6 @@ struct StackInfo {
 impl StackInfo {
     pub fn new() -> StackInfo {
         StackInfo {
-            rho: 0,
             top: 0,
             vars: HashMap::new(),
         }
@@ -20,9 +18,9 @@ impl StackInfo {
         self.vars.insert(id.to_string(), self.top);
         self.top += 1;
     }
-    pub fn lookup(&self, id: &str) -> Option<(usize, usize)> {
+    pub fn lookup(&self, id: &str) -> Option<usize> {
         if let Some(val) = self.vars.get(id) {
-            return Some((self.rho, val.clone()));
+            return Some(val.clone());
         }
         return None;
     }
@@ -59,10 +57,10 @@ impl Allocator {
         self.enclosures.push(info);
     }
 
-    pub fn lookup(&mut self, id: &str) -> Option<(usize, usize)> {
+    pub fn lookup(&mut self, id: &str) -> Option<usize> {
         for encl in self.enclosures.iter().rev() {
-            if let Some(location) = encl.lookup(id) {
-                return Some(location);
+            if let Some(offset) = encl.lookup(id) {
+                return Some(offset);
             }
         }
         None

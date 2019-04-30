@@ -4,48 +4,131 @@ use self::allocator::Allocator;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt};
 use crate::frontend::visitor::{walk_expr, walk_stmt, Visitor};
 use crate::vm::bytecode::{ByteCode, Inst, OP_TO_BYTE};
+use std::collections::HashMap;
 
 // TODO: Split off bool to t conversion funcs
 use crate::vm::VirtualMachine;
 
-pub fn generate(stmts: Stmt) -> Result<Vec<Inst<i64>>, &'static str> {
+pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
     let mut assembler = Assembler::new();
     assembler
-        .assemble(&stmts)
+        .make_blocks(&stmts)
         .map_err(|_| "Couldn't Assemble")?;
-    assembler.inst.push(Inst::new_inst(ByteCode::HALT));
-    Ok(assembler.inst)
+
+    for (label, instructions) in &assembler.labels {
+        println!("===={}====", label);
+        for i in instructions {
+            println!("{}", i);
+        }
+    }
+    println!("");
+
+    assembler.assemble()
 }
 
 pub struct Assembler {
-    inst: Vec<Inst<i64>>,
+    labels: HashMap<String, Vec<Inst>>,
+    block: String,
+    suffix: u32,
     rho: usize,
     alloc: Allocator,
 }
 
 impl Assembler {
     pub fn new() -> Assembler {
+        let mut labels = HashMap::new();
+        labels.insert("START".to_string(), Vec::new());
         Assembler {
-            inst: Vec::new(),
+            labels,
+            block: "START".to_string(),
+            suffix: 0,
             rho: 0,
             alloc: Allocator::new(),
         }
     }
 
-    pub fn assemble(&mut self, stmt: &Stmt) -> Result<(), ()> {
+    pub fn make_blocks(&mut self, stmt: &Stmt) -> Result<(), ()> {
         self.visit_stmt(stmt);
         Ok(())
     }
 
-    pub fn l_value(&mut self, lhs: &ExprNode) -> i64 {
-        match &*lhs.expr {
+    pub fn assemble(&mut self) -> Result<Vec<Inst>, &'static str> {
+        // Cap off the last instruction with a HALT
+        let mut current_block = self.labels.get_mut(&self.block).unwrap();
+        current_block.push(Inst::new_inst(ByteCode::HALT));
+
+        let mut inst: Vec<Inst> = Vec::new();
+        let mut label_locs: HashMap<String, usize> = HashMap::new();
+        label_locs.insert("START".to_string(), 0);
+
+        // Make sure to get the start first
+        let start = self.labels.remove("START").unwrap();
+        inst.extend(start);
+
+        for (label, block) in &self.labels {
+            label_locs.insert(label.clone(), inst.len());
+            let block = block.clone();
+            inst.extend(block);
+        }
+
+        for (label, offset) in &label_locs {
+            inst = inst
+                .iter()
+                .map(|i| i.update_lbl(label, *offset as i64))
+                .collect();
+        }
+
+        Ok(inst)
+    }
+
+    fn next_label(&mut self) -> String {
+        let lbl = format!("{}{}", self.block, self.suffix);
+        self.suffix += 1;
+        self.labels.insert(lbl.clone(), Vec::new());
+        lbl
+    }
+
+    pub fn l_value(&mut self, lhs: &ExprNode) -> Vec<Inst> {
+        let mut inst = Vec::new();
+        if let Expr::Identifier(id) = &*lhs.expr {
+            let offset = self.alloc.lookup(id).map_or(-1, |x| x as i64);
+            inst.push(Inst::new_data(ByteCode::LOADC, offset));
+        }
+        inst
+    }
+
+    pub fn r_value(&mut self, rhs: &ExprNode) -> Vec<Inst> {
+        match &*rhs.expr {
             Expr::Identifier(id) => {
-                if let Some((rho, offset)) = self.alloc.lookup(id) {
-                    return rho as i64 + offset as i64;
-                }
-                -1
+                let mut inst = self.l_value(rhs);
+                inst.push(Inst::new_inst(ByteCode::LOAD));
+                return inst;
             }
-            _ => -1,
+            Expr::Literal(literal) => {
+                // TODO: Handle String and Nil
+                let mut inst = Vec::new();
+                match literal {
+                    Literal::Number(literal) => {
+                        inst.push(Inst::new_data(ByteCode::LOADC, *literal));
+                    }
+                    Literal::Boolean(literal) => {
+                        let literal: i64 = VirtualMachine::bool_to_t(*literal);
+                        inst.push(Inst::new_data(ByteCode::LOADC, literal));
+                    }
+                    _ => {}
+                }
+                return inst;
+            }
+            Expr::BinaryOp(lhs, op, rhs) => {
+                // TODO: Handle ambiguity of minus operator
+                let mut inst = Vec::new();
+                inst.extend(self.r_value(lhs));
+                inst.extend(self.r_value(rhs));
+                let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
+                inst.push(Inst::new_inst(bytecode));
+                inst
+            }
+            _ => Vec::new(),
         }
     }
 }
@@ -59,32 +142,82 @@ impl Visitor<()> for Assembler {
                 self.alloc.pop_level();
             }
             Stmt::Declaration(id, rhs) => {
-                self.visit_expr(rhs);
+                let decl_block = self.r_value(rhs);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.extend(decl_block);
                 self.alloc.define(id, rhs);
-                if let Some((rho, offset)) = self.alloc.lookup(id) {
-                    let offset: i64 = rho as i64 + offset as i64;
-                    self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
-                }
-                self.inst.push(Inst::new_inst(ByteCode::STORE));
+                let offset = self.alloc.lookup(id).unwrap() as i64;
+                current_block.push(Inst::new_data(ByteCode::LOADC, offset));
+                current_block.push(Inst::new_inst(ByteCode::STORE));
             }
             Stmt::Assignment(lhs, rhs) => {
-                self.visit_expr(rhs);
-                let offset = self.l_value(lhs);
-                self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
-                self.inst.push(Inst::new_inst(ByteCode::STORE));
+                let rhs = self.r_value(rhs);
+                let lhs = self.l_value(lhs);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.extend(rhs);
+                current_block.extend(lhs);
+                current_block.push(Inst::new_inst(ByteCode::STORE));
             }
             Stmt::If(cond, stmt, alt) => {
-                self.visit_expr(cond);
-                let jump_a = self.inst.len();
-                self.inst.push(Inst::new_data(ByteCode::JUMPZ, -1));
-                self.visit_stmt(stmt);
-                let jump_b = self.inst.len();
-                self.inst.push(Inst::new_data(ByteCode::JUMP, -1));
-                self.visit_stmt(alt);
+                let parent_lbl = self.block.clone();
+                let stmt_lbl = self.next_label();
+                let alt_lbl = self.next_label();
+                let cont_lbl = self.next_label();
 
-                // Now retroactively edit the jump locations
-                self.inst[jump_a] = Inst::new_data(ByteCode::JUMPZ, jump_b as i64);
-                self.inst[jump_b] = Inst::new_data(ByteCode::JUMPZ, self.inst.len() as i64);
+                // Evaluate cond
+                let cond_block = self.r_value(cond);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.extend(cond_block);
+                current_block.push(Inst::new_jump(ByteCode::JUMPZ, alt_lbl.clone()));
+                current_block.push(Inst::new_jump(ByteCode::JUMP, stmt_lbl.clone()));
+
+                // Evaluate stmt
+                self.block = stmt_lbl;
+                self.visit_stmt(stmt);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_jump(ByteCode::JUMP, cont_lbl.clone()));
+
+                // Evaluate alt
+                self.block = alt_lbl;
+                self.visit_stmt(alt);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_jump(ByteCode::JUMP, cont_lbl.clone()));
+
+                self.block = cont_lbl;
+            }
+            Stmt::While(cond, stmt) => {
+                let parent_lbl = self.block.clone();
+                let cond_lbl = self.next_label();
+                let stmt_lbl = self.next_label();
+                let cont_lbl = self.next_label();
+
+                // Evaluate expr
+                self.block = cond_lbl.clone();
+                let cond_expr = self.r_value(cond);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.extend(cond_expr);
+                current_block.push(Inst::new_jump(ByteCode::JUMPZ, cont_lbl.clone()));
+                current_block.push(Inst::new_jump(ByteCode::JUMP, stmt_lbl.clone()));
+
+                // Evaluate stmt
+                self.block = stmt_lbl;
+                self.visit_stmt(stmt);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_jump(ByteCode::JUMP, cond_lbl.clone()));
+
+                self.block = cont_lbl;
+            }
+            Stmt::FunDecl(id, params, _, body) => {
+                for param in params {
+                    if let Expr::Identifier(id) = &*param.expr {
+                        self.alloc.define(id, param);
+                    }
+                }
+                let parent_lbl = self.block.clone();
+                let fun_lbl = id.clone();
+                self.block = fun_lbl;
+                self.visit_stmt(body);
+                self.block = parent_lbl;
             }
             _ => {
                 walk_stmt(self, s);
@@ -92,40 +225,5 @@ impl Visitor<()> for Assembler {
         }
     }
 
-    fn visit_expr(&mut self, e: &ExprNode) {
-        walk_expr(self, e);
-        match &*e.expr {
-            Expr::BinaryOp(_, op, _) => {
-                let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
-                self.inst.push(Inst::new_inst(bytecode));
-            }
-            Expr::UnaryOp(op, _) => {
-                // TODO: Deal with ambiguity of minus operator
-                let bytecode: ByteCode = OP_TO_BYTE.get(op).unwrap().clone();
-                self.inst.push(Inst::new_inst(bytecode));
-            }
-            Expr::Identifier(id) => match self.alloc.lookup(id) {
-                Some((rho, offset)) => {
-                    let offset: i64 = rho as i64 + offset as i64;
-                    self.inst.push(Inst::new_data(ByteCode::LOADC, offset));
-                    self.inst.push(Inst::new_inst(ByteCode::LOAD));
-                }
-                None => panic!("Could not find id"),
-            },
-            Expr::Literal(value) => {
-                // TODO: Handle String and Nil
-                match value {
-                    Literal::Number(value) => {
-                        self.inst.push(Inst::new_data(ByteCode::LOADC, *value));
-                    }
-                    Literal::Boolean(value) => {
-                        let value: i64 = VirtualMachine::bool_to_t(*value);
-                        self.inst.push(Inst::new_data(ByteCode::LOADC, value));
-                    }
-                    _ => {}
-                }
-            }
-            _ => println!("Couldn't match {}", &*e.expr),
-        }
-    }
+    fn visit_expr(&mut self, e: &ExprNode) {}
 }
