@@ -1,6 +1,6 @@
 # Esta
 
-[![Build Status](https://travis-ci.com/epellis/esta.svg?branch=master)](https://travis-ci.com/epellis/esta)
+[![CircleCI](https://circleci.com/gh/epellis/esta.svg?style=svg)](https://circleci.com/gh/epellis/esta)
 
 Esta is a gradually typed, interpreted language of my own design written in Rust
 
