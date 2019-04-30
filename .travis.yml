@@ -3,6 +3,13 @@ rust:
   - stable
   - beta
   - nightly
+#cache:
+#  - cargo
+script:
+  - rm -rf ~/.cargo/registry/
+  - cargo clean
+  - RUST_BACKTRACE=1 CARGO_INCREMENTAL=0 cargo build --release --verbose
+  - RUST_BACKTRACE=1 CARGO_INCREMENTAL=0 cargo test --verbose
 matrix:
   allow_failures:
     - rust: nightly
