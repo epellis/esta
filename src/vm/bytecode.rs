@@ -10,6 +10,10 @@ pub enum ByteCode {
     LOADRC, // Push data plus the current frame pointer to the stack
     STORE,  // Overwrite a value at address specified in top of stack
     POP,    // Pop the top element off the stack
+    MARK,   // Save context for function call setup
+    CALL,   // Switch context between two functions
+    ALLOC,  // Extend the stack by a given amount
+    RET,    // Return control to the caller
     NEW,    // Allocate space on the heap for an object the size of top of stack
     JUMP,   // Change the PC to a new value
     JUMPZ,  // Change the PC to a new value if the top of stack is zero

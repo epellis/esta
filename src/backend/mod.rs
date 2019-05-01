@@ -93,7 +93,7 @@ impl Assembler {
     }
 
     fn next_label(&mut self) -> String {
-        let lbl = format!("{}_{}", self.block, self.suffix);
+        let lbl = format!("{}_{}", self.base, self.suffix);
         self.suffix += 1;
         self.labels.insert(lbl.clone(), Vec::new());
         lbl
@@ -151,12 +151,9 @@ impl Assembler {
                 for arg in args {
                     inst.extend(self.r_value(arg));
                 }
-                inst.push(Inst::new_data(
-                    ByteCode::LOADC,
-                    self.alloc.stack_top() as i64,
-                ));
-                inst.push(Inst::new_data(ByteCode::LOADC, 0));
-                inst.push(Inst::new_jump(ByteCode::JUMP, id.clone()));
+                inst.push(Inst::new_jump(ByteCode::LOADC, format!("{}_0", id)));
+                inst.push(Inst::new_inst(ByteCode::MARK));
+                inst.push(Inst::new_inst(ByteCode::CALL));
                 inst
             }
             _ => Vec::new(),
@@ -237,33 +234,26 @@ impl Visitor<()> for Assembler {
                 self.block = cont_lbl;
             }
             Stmt::FunDecl(id, params, _, body) => {
-                self.alloc.push_level(self.alloc.stack_top());
-
-                let parent_lbl = self.block.clone();
-                self.block = id.clone();
-                self.labels.insert(id.clone(), Vec::new());
-
-                //                let mut inst = Vec::new();
-
-                //                for param in params {
-                //                    if let Expr::Identifier(id) = &*param.expr {
-                //                        self.alloc.define(id, param);
-                //                    }
-                //                }
-                //                // TODO: If the variables are already on the stack they don't really need to be copied
-                //                for param in params.rev() {
-                //                    if let Expr::Identifier(id) = &*param.expr {
-                //                        inst.extend(self.l_value(param));
-                //                        inst.push(Inst::new_inst(ByteCode::LOAD));
-                //                    }
-                //                }
-
-                walk_stmt(self, s);
-
-                // STACK TEARDOWN - ASSUME VALUE IS ON THE TOP OF STACK
-
-                self.alloc.pop_level();
-                self.block = parent_lbl;
+                let old_base = self.base.clone();
+                let old_suffix = self.suffix;
+                self.base = id.clone();
+                self.suffix = 0;
+                self.block = self.next_label();
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_data(ByteCode::ALLOC, params.len() as i64));
+                walk_stmt(self, body);
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.push(Inst::new_inst(ByteCode::RET));
+                self.base = old_base;
+                self.suffix = old_suffix;
+            }
+            Stmt::Return(expr) => {
+                let inst = match &expr {
+                    Some(expr) => self.r_value(expr),
+                    None => vec![Inst::new_data(ByteCode::LOADC, 0)],
+                };
+                let mut current_block = self.labels.get_mut(&self.block).unwrap();
+                current_block.extend(inst);
             }
             _ => {
                 walk_stmt(self, s);

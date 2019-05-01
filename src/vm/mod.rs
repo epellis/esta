@@ -66,6 +66,25 @@ impl VirtualMachine {
                 ByteCode::POP => {
                     self.pop()?;
                 }
+                ByteCode::MARK => {
+                    let fp = self.fp as i64;
+                    self.stack.push(fp);
+                }
+                ByteCode::CALL => {
+                    self.fp = self.stack.len();
+                    let tmp = self.pop()?;
+                    self.push(self.pc as i64);
+                    self.pc = tmp as usize;
+                }
+                ByteCode::ALLOC => {
+                    for _ in 0..ir.data.unwrap() {
+                        self.push(0);
+                    }
+                }
+                ByteCode::RET => {
+                    self.pc = self.pop()? as usize;
+                    self.fp = self.pop()? as usize;
+                }
                 ByteCode::NEW => {
                     let heap_top = self.heap.len() as usize;
                     let length = self.pop()? as usize;

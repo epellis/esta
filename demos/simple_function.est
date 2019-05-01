@@ -1,3 +1,6 @@
-var b = 1;
-b = b;
+var a = foo(1);
 
+fun foo(a) {
+    a = a + 1;
+    return a;
+}
