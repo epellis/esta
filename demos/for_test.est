@@ -1,8 +1,6 @@
 var b = 0;
 for var a = 0; a < 4; a = a + 1; {
-    for var c = 0; c < 4; c = c + 1; {
-        for var d = 0; d < 4; d = d + 1; {
-            b = b + 1;
-        }
+    for var c = 0; c < 2; c = c + 1; {
+        b = b + 1;
     }
 }

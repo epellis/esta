@@ -63,8 +63,14 @@ Stmt: Box<Stmt> = {
 };
 
 DeclStmt: Box<Stmt> = {
-    "var" <id:Identifier> "=" <rhs:Expr> => Box::new(Stmt::Declaration(id.identify(), rhs)),
-    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify(), ExprNode::new_typed(Expr::Literal(Literal::Nil), id.type_of))),
+    "var" <id:Identifier> "=" <rhs:Expr> => {
+        let mut block = Vec::new();
+        block.push(Box::new(Stmt::Declaration(id.identify())));
+        let lhs = ExprNode::new_untyped(Expr::Identifier(id.identify()));
+        block.push(Box::new(Stmt::Assignment(lhs, rhs)));
+        Box::new(Stmt::Block(block))
+    },
+    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify())),
 }
 
 AssignStmt: Box<Stmt> = {

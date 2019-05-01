@@ -4,25 +4,26 @@ use std::fmt;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ByteCode {
-    LOADC, // Push a value to the stack
-    LOAD,  // Push a value at address specified in top of address to stack
-    LOADA, // LOADC followed by LOAD. For variable addresses
-    STORE, // Overwrite a value at address specified in top of stack
-    POP,   // Pop the top element off the stack
-    NEW,   // Allocate space on the heap for an object the size of top of stack
-    JUMP,  // Change the PC to a new value
-    JUMPZ, // Change the PC to a new value if the top of stack is zero
-    HALT,  // Stop the VM from executing
-    ADD,   // Add the top two items on the stack and push the result
-    SUB,   // Subtract the top two items on the stack and push the result
-    MUL,   // Multiply the top two items on the stack and push the result
-    DIV,   // Divide the top two items on the stack and push the result
-    MOD,   // Modulo's the top two items on the stack and push the result
-    AND,   // Logical AND's the top two items on the stack and push the result
-    OR,    // Logical OR's the top two items on the stack and push the result
-    EQ,    // Checks if the top two items on the stack equal each other and push result
-    NEQ,   // Checks if the top two items on the stack do not equal each other and push result
-    LE,    // Checks if the first item on the stack is less than the second item and push result
+    LOADC,  // Push a value to the stack
+    LOAD,   // Push a value at address specified in top of address to stack
+    LOADA,  // LOADC followed by LOAD. For variable addresses
+    LOADRC, // Push data plus the current frame pointer to the stack
+    STORE,  // Overwrite a value at address specified in top of stack
+    POP,    // Pop the top element off the stack
+    NEW,    // Allocate space on the heap for an object the size of top of stack
+    JUMP,   // Change the PC to a new value
+    JUMPZ,  // Change the PC to a new value if the top of stack is zero
+    HALT,   // Stop the VM from executing
+    ADD,    // Add the top two items on the stack and push the result
+    SUB,    // Subtract the top two items on the stack and push the result
+    MUL,    // Multiply the top two items on the stack and push the result
+    DIV,    // Divide the top two items on the stack and push the result
+    MOD,    // Modulo's the top two items on the stack and push the result
+    AND,    // Logical AND's the top two items on the stack and push the result
+    OR,     // Logical OR's the top two items on the stack and push the result
+    EQ,     // Checks if the top two items on the stack equal each other and push result
+    NEQ,    // Checks if the top two items on the stack do not equal each other and push result
+    LE,     // Checks if the first item on the stack is less than the second item and push result
     LEQ, // Checks if the first item on the stack is less than or equal the second item and push result
     GE,  // Checks if the first item on the stack is greater than the second item and push result
     GEQ, // Checks if the first item on the stack is greater than or equal the second item and push result

@@ -35,9 +35,7 @@ pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) {
                 v.visit_expr(value);
             }
         }
-        Stmt::Declaration(id, rhs) => {
-            v.visit_expr(rhs);
-        }
+        Stmt::Declaration(id) => {}
         Stmt::FunDecl(id, params, ret, body) => {
             for param in params {
                 v.visit_expr(param);

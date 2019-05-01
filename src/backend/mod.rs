@@ -28,21 +28,25 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
 
 pub struct Assembler {
     labels: HashMap<String, Vec<Inst>>,
+    base: String,
     block: String,
     suffix: u32,
-    rho: usize,
+    rho: HashMap<String, usize>,
     alloc: Allocator,
 }
 
 impl Assembler {
     pub fn new() -> Assembler {
         let mut labels = HashMap::new();
-        labels.insert("START".to_string(), Vec::new());
+        labels.insert("START_0".to_string(), Vec::new());
+        let mut rho = HashMap::new();
+        rho.insert("START".to_string(), 0);
         Assembler {
             labels,
-            block: "START".to_string(),
-            suffix: 0,
-            rho: 0,
+            base: "START".to_string(),
+            block: "START_0".to_string(),
+            suffix: 1,
+            rho: rho,
             alloc: Allocator::new(),
         }
     }
@@ -59,10 +63,16 @@ impl Assembler {
 
         let mut inst: Vec<Inst> = Vec::new();
         let mut label_locs: HashMap<String, usize> = HashMap::new();
-        label_locs.insert("START".to_string(), 0);
+        label_locs.insert("START_0".to_string(), 0);
+
+        let rho = self.rho.get("START").unwrap();
+        println!("Start variable count: {}", rho);
+        for _ in 0..*rho {
+            inst.push(Inst::new_data(ByteCode::LOADC, 0));
+        }
 
         // Make sure to get the start first
-        let start = self.labels.remove("START").unwrap();
+        let start = self.labels.remove("START_0").unwrap();
         inst.extend(start);
 
         // TODO: Maybe try to "chain" blocks together if they have an unconditional jump
@@ -92,9 +102,8 @@ impl Assembler {
     pub fn l_value(&mut self, lhs: &ExprNode) -> Vec<Inst> {
         let mut inst = Vec::new();
         if let Expr::Identifier(id) = &*lhs.expr {
-            let offset = self.alloc.lookup(id).map_or(0, |x| x);
-            let offset = self.rho as i64 + offset as i64;
-            inst.push(Inst::new_data(ByteCode::LOADC, offset));
+            let offset = self.alloc.lookup(id).map_or(0, |x| x as i64);
+            inst.push(Inst::new_data(ByteCode::LOADRC, offset));
         }
         inst
     }
@@ -137,6 +146,19 @@ impl Assembler {
                 inst.push(Inst::new_inst(bytecode));
                 inst
             }
+            Expr::FunCall(id, args) => {
+                let mut inst = Vec::new();
+                for arg in args {
+                    inst.extend(self.r_value(arg));
+                }
+                inst.push(Inst::new_data(
+                    ByteCode::LOADC,
+                    self.alloc.stack_top() as i64,
+                ));
+                inst.push(Inst::new_data(ByteCode::LOADC, 0));
+                inst.push(Inst::new_jump(ByteCode::JUMP, id.clone()));
+                inst
+            }
             _ => Vec::new(),
         }
     }
@@ -146,21 +168,12 @@ impl Visitor<()> for Assembler {
     fn visit_stmt(&mut self, s: &Stmt) {
         match s {
             Stmt::Block(_) => {
-                //                self.rho = self.alloc.stack_top();
-                self.alloc.push_level(self.alloc.stack_top());
                 walk_stmt(self, s);
-                self.alloc.pop_level();
-                //                self.rho = self.alloc.stack_top();
             }
-            Stmt::Declaration(id, rhs) => {
-                let decl_block = self.r_value(rhs);
-                let mut current_block = self.labels.get_mut(&self.block).unwrap();
-                current_block.extend(decl_block);
-                self.alloc.define(id, rhs);
-                let offset = self.alloc.lookup(id).unwrap() as i64;
-                current_block.push(Inst::new_data(ByteCode::LOADC, offset));
-                current_block.push(Inst::new_inst(ByteCode::STORE));
-                current_block.push(Inst::new_inst(ByteCode::POP));
+            Stmt::Declaration(id) => {
+                let lhs = self.alloc.define(id);
+                let rho = self.rho.get(&self.base).unwrap();
+                self.rho.insert(self.base.clone(), rho + 1);
             }
             Stmt::Assignment(lhs, rhs) => {
                 let rhs = self.r_value(rhs);
@@ -224,15 +237,32 @@ impl Visitor<()> for Assembler {
                 self.block = cont_lbl;
             }
             Stmt::FunDecl(id, params, _, body) => {
-                for param in params {
-                    if let Expr::Identifier(id) = &*param.expr {
-                        self.alloc.define(id, param);
-                    }
-                }
+                self.alloc.push_level(self.alloc.stack_top());
+
                 let parent_lbl = self.block.clone();
-                let fun_lbl = id.clone();
-                self.block = fun_lbl;
-                self.visit_stmt(body);
+                self.block = id.clone();
+                self.labels.insert(id.clone(), Vec::new());
+
+                //                let mut inst = Vec::new();
+
+                //                for param in params {
+                //                    if let Expr::Identifier(id) = &*param.expr {
+                //                        self.alloc.define(id, param);
+                //                    }
+                //                }
+                //                // TODO: If the variables are already on the stack they don't really need to be copied
+                //                for param in params.rev() {
+                //                    if let Expr::Identifier(id) = &*param.expr {
+                //                        inst.extend(self.l_value(param));
+                //                        inst.push(Inst::new_inst(ByteCode::LOAD));
+                //                    }
+                //                }
+
+                walk_stmt(self, s);
+
+                // STACK TEARDOWN - ASSUME VALUE IS ON THE TOP OF STACK
+
+                self.alloc.pop_level();
                 self.block = parent_lbl;
             }
             _ => {

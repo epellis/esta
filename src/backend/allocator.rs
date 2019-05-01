@@ -14,8 +14,8 @@ impl StackInfo {
             vars: HashMap::new(),
         }
     }
-    pub fn define(&mut self, id: &str, val: &ExprNode) {
-        println!("Defining: {}:{}", id, self.top);
+    pub fn define(&mut self, id: &str) {
+        println!("Allocating: {}:{}", id, self.top);
         self.vars.insert(id.to_string(), self.top);
         self.top += 1;
     }
@@ -52,9 +52,9 @@ impl Allocator {
         self.enclosures.pop().expect("popped the global stack");
     }
 
-    pub fn define(&mut self, id: &str, val: &ExprNode) {
+    pub fn define(&mut self, id: &str) {
         let mut info = self.enclosures.pop().expect("popped the global stack");
-        info.define(id, val);
+        info.define(id);
         self.enclosures.push(info);
     }
 

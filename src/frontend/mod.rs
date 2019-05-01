@@ -14,7 +14,7 @@ pub fn run(input: &str) -> Result<Stmt, &'static str> {
         .map_err(|_| "Parsing Error")?;
     let stmts = Stmt::Block(stmts);
     // TODO: Discover all variables in a given scope
-    let stmts = scope::discover_scope(stmts)?;
+    //    let stmts = scope::discover_scope(stmts)?;
     println!("{}", stmts);
     Ok(stmts)
 }

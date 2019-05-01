@@ -32,10 +32,11 @@ impl Scope {
         self.enclosures.pop().expect("popped the global stack");
     }
 
-    pub fn define(&mut self, id: &str, val: &ExprNode) {
+    pub fn define(&mut self, id: &str) {
         // TODO: Find a less destructive way of pushing to the upper stack
         let mut top = self.enclosures.pop().expect("popped the global stack");
-        top.insert(id.to_string(), val.clone());
+        //        top.insert(id.to_string(), val.clone());
+        top.insert(id.to_string(), ExprNode::new_nil());
         self.enclosures.push(top);
     }
 
@@ -61,15 +62,14 @@ impl Visitor<()> for Scope {
                 walk_stmt(self, s);
                 self.pop_level();
             }
-            Stmt::Declaration(id, rhs) => {
-                self.define(id, rhs);
-                walk_stmt(self, s);
+            Stmt::Declaration(id) => {
+                self.define(id);
             }
             Stmt::FunDecl(id, params, ret, body) => {
                 self.push_level();
                 for param in params {
                     if let Expr::Identifier(p) = &*param.expr {
-                        self.define(p, &ExprNode::new_nil());
+                        self.define(p);
                     }
                 }
                 walk_stmt(self, s);

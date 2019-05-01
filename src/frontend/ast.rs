@@ -15,7 +15,7 @@ pub enum Stmt {
         Box<Stmt>,
     ),
     Return(Option<ExprNode>),
-    Declaration(String, ExprNode),
+    Declaration(String),
     FunDecl(String, Vec<ExprNode>, Type, Box<Stmt>),
     Assignment(ExprNode, ExprNode),
 }
@@ -140,9 +140,10 @@ impl fmt::Display for Stmt {
                 write!(f, "([{}])", stmts)
             }
             Stmt::Assignment(lhs, rhs) => write!(f, "({} <- {})", lhs, rhs),
-            Stmt::Declaration(identifier, binding) => {
-                write!(f, "(define {} {})", identifier, binding)
-            }
+            //            Stmt::Declaration(identifier, binding) => {
+            //                write!(f, "(define {} {})", identifier, binding)
+            //            }
+            Stmt::Declaration(identifier) => write!(f, "(define {})", identifier),
             Stmt::While(condition, block) => write!(f, "(while {} {})", condition, block),
             Stmt::If(condition, block, alternate) => {
                 write!(f, "(if {} {} {})", condition, block, alternate)

@@ -7,20 +7,20 @@ use std::fmt::Debug;
 /// The Esta Virtual Machine
 pub struct VirtualMachine {
     stack: Vec<i64>,
-    mem: Vec<i64>,
     heap: Vec<i64>,
     inst: Vec<Inst>,
     pc: usize,
+    fp: usize,
 }
 
 impl VirtualMachine {
     pub fn new(inst: Vec<Inst>) -> VirtualMachine {
         VirtualMachine {
             stack: Vec::new(),
-            mem: Vec::new(),
             heap: Vec::new(),
             inst,
             pc: 0,
+            fp: 0,
         }
     }
 
@@ -37,7 +37,7 @@ impl VirtualMachine {
                 self.pc,
                 format!("{}", ir),
                 &self.stack,
-                &self.mem
+                &self.heap
             );
             counter += 1;
 
@@ -45,19 +45,23 @@ impl VirtualMachine {
                 ByteCode::LOADC => self.push(ir.data.clone().unwrap()),
                 ByteCode::LOAD => {
                     let addr: usize = self.pop()? as usize;
-                    self.push(self.mem[addr].clone());
+                    self.push(self.stack[addr].clone());
                 }
                 ByteCode::LOADA => {
                     let addr: usize = ir.data.unwrap() as usize;
-                    self.push(self.mem[addr].clone());
+                    self.push(self.stack[addr].clone());
+                }
+                ByteCode::LOADRC => {
+                    let val = ir.data.unwrap() + self.fp as i64;
+                    self.push(val);
                 }
                 ByteCode::STORE => {
                     let addr: usize = self.pop()? as usize;
 
-                    if self.mem.len() <= addr {
-                        self.mem.resize(addr + 1, 0);
+                    if self.stack.len() <= addr {
+                        self.stack.resize(addr + 1, 0);
                     }
-                    self.mem[addr] = self.top()?.clone();
+                    self.stack[addr] = self.top()?.clone();
                 }
                 ByteCode::POP => {
                     self.pop()?;
@@ -206,6 +210,17 @@ mod tests {
     }
 
     #[test]
+    fn test_loadrc() {
+        let instructions: Vec<Inst> = vec![
+            Inst::new_data(ByteCode::LOADRC, 1),
+            Inst::new_inst(ByteCode::HALT),
+        ];
+        let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+        assert_eq!(vm.run().is_ok(), true);
+        assert_eq!(&[1].to_vec(), &vm.stack);
+    }
+
+    #[test]
     fn test_load() {
         let instructions: Vec<Inst> = vec![
             Inst::new_data(ByteCode::LOADC, 2),
@@ -218,7 +233,6 @@ mod tests {
         let mut vm: VirtualMachine = VirtualMachine::new(instructions);
         assert_eq!(vm.run().is_ok(), true);
         assert_eq!(&[2, 2].to_vec(), &vm.stack);
-        assert_eq!(&[2].to_vec(), &vm.mem);
     }
 
     #[test]
