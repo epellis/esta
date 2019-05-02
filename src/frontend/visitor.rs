@@ -46,7 +46,6 @@ pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) {
             v.visit_expr(lhs);
             v.visit_expr(rhs);
         }
-        Stmt::For(_, _, _, _) => {} // TODO: Synthesize For Loop into While Loop
     }
 }
 

@@ -8,12 +8,6 @@ pub enum Stmt {
     Block(Vec<Box<Stmt>>),
     If(ExprNode, Box<Stmt>, Box<Stmt>),
     While(ExprNode, Box<Stmt>),
-    For(
-        Option<Box<Stmt>>,
-        Option<ExprNode>,
-        Option<Box<Stmt>>,
-        Box<Stmt>,
-    ),
     Return(Option<ExprNode>),
     Declaration(String),
     FunDecl(String, Vec<ExprNode>, Type, Box<Stmt>),
@@ -140,21 +134,10 @@ impl fmt::Display for Stmt {
                 write!(f, "([{}])", stmts)
             }
             Stmt::Assignment(lhs, rhs) => write!(f, "({} <- {})", lhs, rhs),
-            //            Stmt::Declaration(identifier, binding) => {
-            //                write!(f, "(define {} {})", identifier, binding)
-            //            }
             Stmt::Declaration(identifier) => write!(f, "(define {})", identifier),
             Stmt::While(condition, block) => write!(f, "(while {} {})", condition, block),
             Stmt::If(condition, block, alternate) => {
                 write!(f, "(if {} {} {})", condition, block, alternate)
-            }
-            Stmt::For(setup, test, increment, block) => {
-                let setup = setup.clone().unwrap_or(Box::new(Stmt::Block(Vec::new())));
-                let test = test.clone().unwrap_or(ExprNode::new_default());
-                let increment = increment
-                    .clone()
-                    .unwrap_or(Box::new(Stmt::Block(Vec::new())));
-                write!(f, "(for {} {} {} {})", setup, test, increment, block)
             }
             Stmt::Return(returned) => {
                 let returned = returned.clone().unwrap_or(ExprNode::new_default());

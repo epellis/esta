@@ -66,6 +66,7 @@ impl VirtualMachine {
                 ByteCode::POP => {
                     self.pop()?;
                 }
+                ByteCode::NOP => {}
                 ByteCode::MARK => {
                     let fp = self.fp as i64;
                     self.stack.push(fp);

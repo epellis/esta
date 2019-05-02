@@ -1,6 +1,7 @@
 pub mod backend;
 pub mod frontend;
 pub mod middleend;
+pub mod util;
 pub mod vm;
 
 #[macro_use]

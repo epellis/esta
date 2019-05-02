@@ -10,6 +10,7 @@ pub enum ByteCode {
     LOADRC, // Push data plus the current frame pointer to the stack
     STORE,  // Overwrite a value at address specified in top of stack
     POP,    // Pop the top element off the stack
+    NOP,    // No Operation Done
     MARK,   // Save context for function call setup
     CALL,   // Switch context between two functions
     ALLOC,  // Extend the stack by a given amount
@@ -64,7 +65,6 @@ lazy_static! {
 pub struct Inst {
     pub inst: ByteCode,
     pub data: Option<i64>,
-    pub label: Option<String>,
 }
 
 impl Inst {
@@ -72,43 +72,57 @@ impl Inst {
         Inst {
             inst,
             data: Some(data),
-            label: None,
         }
     }
     pub fn new_inst(inst: ByteCode) -> Inst {
-        Inst {
-            inst,
-            data: None,
-            label: None,
-        }
+        Inst { inst, data: None }
     }
-    pub fn new_jump(inst: ByteCode, label: String) -> Inst {
-        Inst {
-            inst,
-            data: None,
-            label: Some(label),
-        }
+}
+
+#[derive(Debug, Clone)]
+pub enum MetaAsm {
+    Inst(MetaInst),
+    Lbl(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct MetaInst {
+    pub inst: ByteCode,
+    pub var: MetaVar,
+}
+
+impl MetaInst {
+    pub fn new_data(inst: ByteCode, data: i64) -> MetaInst {
+        let var = MetaVar::Data(data);
+        MetaInst { inst, var }
     }
-    pub fn update_lbl(&self, label: &str, offset: i64) -> Inst {
-        if let Some(name) = &self.label {
-            if name == label {
-                return Inst::new_data(self.inst.clone(), offset);
-            }
-        }
-        self.clone()
+    pub fn new_label(inst: ByteCode, label: String) -> MetaInst {
+        let var = MetaVar::Label(label);
+        MetaInst { inst, var }
     }
+    pub fn new_inst(inst: ByteCode) -> MetaInst {
+        let var = MetaVar::None;
+        MetaInst { inst, var }
+    }
+    pub fn new_nop() -> MetaInst {
+        let inst = ByteCode::NOP;
+        let var = MetaVar::None;
+        MetaInst { inst, var }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum MetaVar {
+    Data(i64),
+    Label(String),
+    None,
 }
 
 impl fmt::Display for Inst {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match (&self.data, &self.label) {
-            (None, Some(l)) => write!(f, "{:?} {}", self.inst, l),
-            (Some(d), None) => write!(f, "{:?} {}", self.inst, d),
-            _ => write!(f, "{:?}", self.inst),
+        match &self.data {
+            Some(data) => write!(f, "{:?} {:?}", self.inst, data),
+            None => write!(f, "{:?}", self.inst),
         }
-        //        match &self.data {
-        //            Some(data) => write!(f, "{:?} {:?}", self.inst, data),
-        //            None => write!(f, "{:?}", self.inst),
-        //        }
     }
 }
