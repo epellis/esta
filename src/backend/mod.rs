@@ -10,21 +10,25 @@ use std::collections::HashMap;
 // TODO: Split off bool to t conversion funcs
 use crate::vm::VirtualMachine;
 
-type DispatchRet = Result<(Vec<MetaAsm>, AsmCtx), &'static str>;
+type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
 pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
-    let (inst, ctx) = dispatch_stmt(AsmCtx::new(), &stmts)?;
+    let mut ctx = AsmCtx::new();
+    println!("");
+    let inst = dispatch_stmt(&mut ctx, &stmts)?;
 
     for i in inst {
         println!("{:?}", i);
     }
 
-    Ok(Vec::new())
+    Ok(vec![Inst::new_inst(ByteCode::HALT)])
 }
 
 // TODO: If we want to refactor into a Trait, each make_* is a necessary defined function implemented
 //  by the type that inherits this trait
-fn dispatch_stmt(ctx: AsmCtx, s: &Stmt) -> DispatchRet {
+fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
+    println!("Dispatch: {}", &s);
+    println!("");
     match s {
         Stmt::Block(body) => make_block(ctx, body),
         Stmt::If(test, body, alter) => make_if(ctx, test, body, alter),
@@ -36,7 +40,9 @@ fn dispatch_stmt(ctx: AsmCtx, s: &Stmt) -> DispatchRet {
     }
 }
 
-fn dispatch_expr(ctx: AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
+fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
+    println!("Dispatch: {}", &e);
+    println!("");
     match &*e.expr {
         Expr::Identifier(id) => make_identifier(ctx, id, l_value),
         Expr::Literal(lit) => make_literal(ctx, lit),
@@ -47,24 +53,29 @@ fn dispatch_expr(ctx: AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
 }
 
 // TODO: May be able to use a try_fold() iterator on this one
-fn make_block(mut ctx: AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
+fn make_block(mut ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
     let mut inst = Vec::new();
     ctx.push_scope();
     for b in body {
-        let (sub_inst, ctx) = dispatch_stmt(ctx.clone(), b)?;
+        let sub_inst = dispatch_stmt(ctx, b)?;
         inst.extend(sub_inst);
     }
     ctx.pop_scope();
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_if(mut ctx: AsmCtx, test: &ExprNode, body: &Box<Stmt>, alter: &Box<Stmt>) -> DispatchRet {
+fn make_if(
+    mut ctx: &mut AsmCtx,
+    test: &ExprNode,
+    body: &Box<Stmt>,
+    alter: &Box<Stmt>,
+) -> DispatchRet {
     let alter_lbl = ctx.next_label();
     let cont_lbl = ctx.next_label();
 
-    let (test, ctx) = dispatch_expr(ctx.clone(), test, false)?;
-    let (body, ctx) = dispatch_stmt(ctx.clone(), body)?;
-    let (alter, ctx) = dispatch_stmt(ctx.clone(), alter)?;
+    let test = dispatch_expr(ctx, test, false)?;
+    let body = dispatch_stmt(ctx, body)?;
+    let alter = dispatch_stmt(ctx, alter)?;
 
     let mut inst = Vec::new();
     inst.extend(test);
@@ -80,15 +91,15 @@ fn make_if(mut ctx: AsmCtx, test: &ExprNode, body: &Box<Stmt>, alter: &Box<Stmt>
     inst.push(MetaAsm::Lbl(alter_lbl.clone()));
     inst.extend(alter);
     inst.push(MetaAsm::Lbl(cont_lbl.clone()));
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_while(mut ctx: AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> DispatchRet {
+fn make_while(mut ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> DispatchRet {
     let test_lbl = ctx.next_label();
     let cont_lbl = ctx.next_label();
 
-    let (test, ctx) = dispatch_expr(ctx.clone(), test, false)?;
-    let (body, ctx) = dispatch_stmt(ctx.clone(), body)?;
+    let test = dispatch_expr(ctx, test, false)?;
+    let body = dispatch_stmt(ctx, body)?;
 
     let mut inst = Vec::new();
     inst.push(MetaAsm::Lbl(test_lbl.clone()));
@@ -103,20 +114,20 @@ fn make_while(mut ctx: AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> DispatchRet
         test_lbl.clone(),
     )));
     inst.push(MetaAsm::Lbl(cont_lbl.clone()));
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_return(ctx: AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
+fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
     Err("Not Implemented")
 }
 
-fn make_declaration(mut ctx: AsmCtx, id: &String) -> DispatchRet {
+fn make_declaration(mut ctx: &mut AsmCtx, id: &String) -> DispatchRet {
     ctx.define(id);
-    return Ok((Vec::new(), ctx));
+    Ok(Vec::new())
 }
 
 fn make_fun(
-    ctx: AsmCtx,
+    ctx: &mut AsmCtx,
     id: &String,
     args: &Vec<ExprNode>,
     ret: &Type,
@@ -125,9 +136,9 @@ fn make_fun(
     Err("Not Implemented")
 }
 
-fn make_assignment(ctx: AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> DispatchRet {
-    let (rhs, ctx) = dispatch_expr(ctx.clone(), rhs, false)?;
-    let (lhs, ctx) = dispatch_expr(ctx.clone(), lhs, true)?;
+fn make_assignment(ctx: &mut AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> DispatchRet {
+    let rhs = dispatch_expr(ctx, rhs, false)?;
+    let lhs = dispatch_expr(ctx, lhs, true)?;
 
     let mut inst = Vec::new();
     inst.extend(rhs);
@@ -135,20 +146,20 @@ fn make_assignment(ctx: AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> DispatchRet {
     inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STORE)));
     inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::POP)));
 
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_identifier(ctx: AsmCtx, id: &String, l_value: bool) -> DispatchRet {
+fn make_identifier(ctx: &mut AsmCtx, id: &String, l_value: bool) -> DispatchRet {
     let mut inst = Vec::new();
     let offset = ctx.get(id)? as i64;
     inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, offset)));
     if !l_value {
         inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
     }
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_literal(ctx: AsmCtx, lit: &Literal) -> DispatchRet {
+fn make_literal(ctx: &mut AsmCtx, lit: &Literal) -> DispatchRet {
     let inst = match lit {
         Literal::Number(num) => MetaInst::new_data(ByteCode::LOADC, *num),
         Literal::Boolean(bool) => {
@@ -157,24 +168,24 @@ fn make_literal(ctx: AsmCtx, lit: &Literal) -> DispatchRet {
         _ => MetaInst::new_nop(),
     };
     let inst = MetaAsm::Inst(inst);
-    Ok((vec![inst], ctx))
+    Ok(vec![inst])
 }
 
-fn make_binary(ctx: AsmCtx, lhs: &ExprNode, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
-    let (lhs, ctx) = dispatch_expr(ctx.clone(), lhs, false)?;
-    let (rhs, ctx) = dispatch_expr(ctx.clone(), rhs, false)?;
+fn make_binary(ctx: &mut AsmCtx, lhs: &ExprNode, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
+    let lhs = dispatch_expr(ctx, lhs, false)?;
+    let rhs = dispatch_expr(ctx, rhs, false)?;
     let op: ByteCode = BIN_OP_TO_BYTE.get(op).unwrap().clone();
     let mut inst = Vec::new();
     inst.extend(lhs);
     inst.extend(rhs);
     inst.push(MetaAsm::Inst(MetaInst::new_inst(op)));
-    Ok((inst, ctx))
+    Ok(inst)
 }
 
-fn make_unary(ctx: AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
+fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
     Err("Not Implemented")
 }
 
-fn make_funcall(ctx: AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
+fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
     Err("Not Implemented")
 }

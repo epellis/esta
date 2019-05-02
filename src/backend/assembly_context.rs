@@ -16,7 +16,7 @@ impl AsmCtx {
             scopes: HashMap::new(),
             suffix: 0,
         };
-        me.push_scope();
+        me.add_fun("main");
         me
     }
     pub fn next_label(&mut self) -> String {
@@ -24,9 +24,11 @@ impl AsmCtx {
         format!("{}_{}", self.base, self.suffix)
     }
     pub fn push_scope(&mut self) {
+        println!("Pushing Scope");
         self.scopes.get_mut(&self.base).unwrap().push(Alloc::new());
     }
     pub fn pop_scope(&mut self) {
+        println!("Popping Scope");
         self.scopes.get_mut(&self.base).unwrap().pop();
     }
     pub fn add_fun(&mut self, id: &str) {

@@ -30,10 +30,7 @@ Stmt: Box<Stmt> = {
         Box::new(Stmt::If(cond,
             Box::new(Stmt::Block(stmts)),
             Box::new(Stmt::Block(Vec::new()))))},
-    // TODO: Synthesize while loop from for loop
     "for" <init:DeclStmt?> ";" <test:Expr> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
-        //        Box::new(Stmt::For(init, test, increment,
-        //            Box::new(Stmt::Block(body))))},
         let mut block = Vec::new();
         if init.is_some() {
             block.push(init.unwrap());
@@ -57,11 +54,12 @@ Stmt: Box<Stmt> = {
             name,
             params,
             Type::Nil,
-    Box::new(Stmt::Block(body))))},
+            Box::new(Stmt::Block(body))))},
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
     <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(ExprNode::new_nil(), proc)),
 };
 
+// TODO: This is wrong. It creates a scope and shadows the declaration.
 DeclStmt: Box<Stmt> = {
     "var" <id:Identifier> "=" <rhs:Expr> => {
         let mut block = Vec::new();
@@ -128,7 +126,6 @@ PrimaryExpr: ExprNode = {
     String => ExprNode::new_typed(Expr::Literal(Literal::String(<>)), Type::String),
     "(" <Expr> ")",
     "Nil" => ExprNode::new_untyped(Expr::Literal(Literal::Nil)),
-//    Identifier => ExprNode::new_untyped(Expr::Identifier(<>)),
     Identifier,
 };
 
