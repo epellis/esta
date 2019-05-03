@@ -1,9 +1,16 @@
 fun main() {
-    var a = 0;
+    var a = 8;
+    var b = 4;
+    var c = a + b;
     foo();
-    foo();
+    bar();
 }
 
 fun foo() {
     var a = 0;
+    var b = 0;
+}
+
+fun bar() {
+    var c = 0;
 }

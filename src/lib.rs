@@ -18,5 +18,6 @@ pub fn run(input: &str) -> Result<(), &'static str> {
     }
     let mut vm = vm::VirtualMachine::new(inst);
     vm.run()?;
+    println!("Ran Successfully");
     Ok(())
 }

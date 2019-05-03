@@ -75,6 +75,9 @@ impl VirtualMachine {
                     self.stack.push(fp);
                 }
                 ByteCode::CALL => {
+                    println!("Old PC: {}", self.pc);
+                    println!("Old FP: {}", self.fp);
+
                     self.fp = self.stack.len();
                     let tmp = self.pop()?;
                     self.push(self.pc as i64);
@@ -88,18 +91,24 @@ impl VirtualMachine {
                         self.push(0);
                     }
                 }
+                /// At this point the frame pointer is pointing to the top of the stack before the last
+                /// and we need to pop
                 ByteCode::RET => {
+                    println!("Old PC: {}", self.pc);
+                    println!("Old FP: {}", self.fp);
                     let new_sp = self.fp as i64 - ir.data.unwrap();
-                    self.pop()?;
-                    self.pc = self.pop()? as usize;
-                    self.fp = self.pop()? as usize;
-
-                    println!("Restoring PC: {}", self.pc);
-                    println!("Restoring FP: {}", self.fp);
+                    self.pc = self.stack[self.fp - 1] as usize;
+                    let new_fp = self.stack[self.fp - 2] as usize;
 
                     while self.stack.len() > new_sp as usize {
                         self.pop()?;
                     }
+
+                    self.fp = new_fp;
+                    println!("Restoring PC: {}", self.pc);
+                    println!("Restoring FP: {}", self.fp);
+
+                    //                    return Err(":(");
                 }
                 ByteCode::NEW => {
                     let heap_top = self.heap.len() as usize;

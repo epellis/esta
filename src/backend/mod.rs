@@ -176,7 +176,7 @@ fn make_assignment(ctx: &mut AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> Dispatch
 fn make_identifier(ctx: &mut AsmCtx, id: &String, l_value: bool) -> DispatchRet {
     let mut inst = Vec::new();
     let offset = ctx.get(id)? as i64;
-    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, offset)));
+    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, offset)));
     if !l_value {
         inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
     }
@@ -217,10 +217,9 @@ fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> Dispatch
         inst.extend(lhs);
     }
 
-    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
-    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
-    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
-    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+    // Push space for the return variable
+    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+
     inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::MARK)));
     inst.push(MetaAsm::Inst(MetaInst::new_label(
         ByteCode::LOADC,
