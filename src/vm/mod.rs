@@ -27,18 +27,21 @@ impl VirtualMachine {
     pub fn run(&mut self) -> Result<(), &'static str> {
         let mut counter = 0;
 
+        println!("#    PC FP INST STACK HEAP");
         loop {
             let ir = &self.inst[self.pc];
-            self.pc += 1;
 
             println!(
-                "{: >4} {: >3} {: <8} {:?}\t{:?}",
+                "{: >4} {: >3} {} {: <8} {:?}\t{:?}",
                 counter,
                 self.pc,
+                self.fp,
                 format!("{}", ir),
                 &self.stack,
                 &self.heap
             );
+
+            self.pc += 1;
             counter += 1;
 
             match ir.inst {
@@ -76,6 +79,9 @@ impl VirtualMachine {
                     let tmp = self.pop()?;
                     self.push(self.pc as i64);
                     self.pc = tmp as usize;
+
+                    println!("New PC: {}", self.pc);
+                    println!("New FP: {}", self.fp);
                 }
                 ByteCode::ALLOC => {
                     for _ in 0..ir.data.unwrap() {
@@ -83,8 +89,17 @@ impl VirtualMachine {
                     }
                 }
                 ByteCode::RET => {
+                    let new_sp = self.fp as i64 - ir.data.unwrap();
+                    self.pop()?;
                     self.pc = self.pop()? as usize;
                     self.fp = self.pop()? as usize;
+
+                    println!("Restoring PC: {}", self.pc);
+                    println!("Restoring FP: {}", self.fp);
+
+                    while self.stack.len() > new_sp as usize {
+                        self.pop()?;
+                    }
                 }
                 ByteCode::NEW => {
                     let heap_top = self.heap.len() as usize;

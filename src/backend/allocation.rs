@@ -14,7 +14,6 @@ impl Alloc {
         }
     }
     pub fn define(&mut self, id: &str) {
-        println!("Defining {}", id);
         self.scope.insert(id.to_string(), self.top);
         self.top += 1;
     }

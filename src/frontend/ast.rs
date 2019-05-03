@@ -6,6 +6,7 @@ use std::fmt;
 #[derive(Clone)]
 pub enum Stmt {
     Block(Vec<Box<Stmt>>),
+    FlatBlock(Vec<Box<Stmt>>), // Does not create it's own scope
     If(ExprNode, Box<Stmt>, Box<Stmt>),
     While(ExprNode, Box<Stmt>),
     Return(Option<ExprNode>),
@@ -129,6 +130,11 @@ impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Stmt::Block(stmts) => {
+                let stmts: Vec<String> = stmts.iter().map(|stmt| format!("{}", stmt)).collect();
+                let stmts = stmts.join("\n");
+                write!(f, "([{}])", stmts)
+            }
+            Stmt::FlatBlock(stmts) => {
                 let stmts: Vec<String> = stmts.iter().map(|stmt| format!("{}", stmt)).collect();
                 let stmts = stmts.join("\n");
                 write!(f, "([{}])", stmts)

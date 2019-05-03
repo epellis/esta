@@ -1,8 +1,10 @@
 pub mod ast;
+mod expand;
 pub mod scope;
 pub mod visitor;
 
 use self::ast::Stmt;
+use self::expand::Expand;
 
 lalrpop_mod!(grammar);
 
@@ -12,7 +14,8 @@ pub fn run(input: &str) -> Result<Stmt, &'static str> {
     let stmts = grammar::StmtsParser::new()
         .parse(input)
         .map_err(|_| "Parsing Error")?;
-    let stmts = Stmt::Block(stmts);
+    let stmts = Stmt::FlatBlock(stmts);
+    let stmts = Expand::expand(stmts)?;
     // TODO: Discover all variables in a given scope
     //    let stmts = scope::discover_scope(stmts)?;
     println!("{}", stmts);

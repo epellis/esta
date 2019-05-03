@@ -1,6 +1,9 @@
-var a = foo(1);
+fun main() {
+    var a = 0;
+    foo();
+    foo();
+}
 
-fun foo(a) {
-    a = a + 1;
-    return a;
+fun foo() {
+    var a = 0;
 }

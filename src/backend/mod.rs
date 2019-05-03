@@ -14,23 +14,21 @@ type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
 pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
     let mut ctx = AsmCtx::new();
-    println!("");
     let inst = dispatch_stmt(&mut ctx, &stmts)?;
-
-    for i in inst {
+    for i in &inst {
         println!("{:?}", i);
     }
+    let inst = assemble(inst, ctx);
 
-    Ok(vec![Inst::new_inst(ByteCode::HALT)])
+    Ok(inst)
 }
 
 // TODO: If we want to refactor into a Trait, each make_* is a necessary defined function implemented
 //  by the type that inherits this trait
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
-    println!("Dispatch: {}", &s);
-    println!("");
     match s {
         Stmt::Block(body) => make_block(ctx, body),
+        Stmt::FlatBlock(body) => make_flat_block(ctx, body),
         Stmt::If(test, body, alter) => make_if(ctx, test, body, alter),
         Stmt::While(test, body) => make_while(ctx, test, body),
         Stmt::Return(value) => make_return(ctx, value),
@@ -41,8 +39,6 @@ fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
 }
 
 fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
-    println!("Dispatch: {}", &e);
-    println!("");
     match &*e.expr {
         Expr::Identifier(id) => make_identifier(ctx, id, l_value),
         Expr::Literal(lit) => make_literal(ctx, lit),
@@ -61,6 +57,15 @@ fn make_block(mut ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
         inst.extend(sub_inst);
     }
     ctx.pop_scope();
+    Ok(inst)
+}
+
+fn make_flat_block(mut ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
+    let mut inst = Vec::new();
+    for b in body {
+        let sub_inst = dispatch_stmt(ctx, b)?;
+        inst.extend(sub_inst);
+    }
     Ok(inst)
 }
 
@@ -133,7 +138,26 @@ fn make_fun(
     ret: &Type,
     body: &Box<Stmt>,
 ) -> DispatchRet {
-    Err("Not Implemented")
+    ctx.add_fun(id);
+    let mut inst = Vec::new();
+    inst.push(MetaAsm::Lbl(id.clone()));
+
+    for var in args {
+        if let Expr::Identifier(id) = &*var.expr {
+            ctx.define(&id);
+        }
+    }
+
+    inst.push(MetaAsm::Inst(MetaInst::new_local_alloc(
+        ByteCode::ALLOC,
+        id.clone(),
+    )));
+
+    inst.extend(dispatch_stmt(ctx, body)?);
+    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
+
+    ctx.pop_fun();
+    Ok(inst)
 }
 
 fn make_assignment(ctx: &mut AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> DispatchRet {
@@ -161,14 +185,14 @@ fn make_identifier(ctx: &mut AsmCtx, id: &String, l_value: bool) -> DispatchRet 
 
 fn make_literal(ctx: &mut AsmCtx, lit: &Literal) -> DispatchRet {
     let inst = match lit {
-        Literal::Number(num) => MetaInst::new_data(ByteCode::LOADC, *num),
-        Literal::Boolean(bool) => {
-            MetaInst::new_data(ByteCode::LOADC, VirtualMachine::bool_to_t(*bool))
-        }
-        _ => MetaInst::new_nop(),
+        Literal::Number(num) => vec![MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, *num))],
+        Literal::Boolean(bool) => vec![MetaAsm::Inst(MetaInst::new_data(
+            ByteCode::LOADC,
+            VirtualMachine::bool_to_t(*bool),
+        ))],
+        _ => Vec::new(),
     };
-    let inst = MetaAsm::Inst(inst);
-    Ok(vec![inst])
+    Ok(inst)
 }
 
 fn make_binary(ctx: &mut AsmCtx, lhs: &ExprNode, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
@@ -187,5 +211,71 @@ fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
 }
 
 fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
-    Err("Not Implemented")
+    let mut inst = Vec::new();
+    for arg in args.iter().rev() {
+        let lhs = dispatch_expr(ctx, arg, false)?;
+        inst.extend(lhs);
+    }
+
+    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
+    inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::MARK)));
+    inst.push(MetaAsm::Inst(MetaInst::new_label(
+        ByteCode::LOADC,
+        id.clone(),
+    )));
+    inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::CALL)));
+
+    Ok(inst)
+}
+
+fn assemble(inst: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
+    let mut machine_inst = Vec::new();
+    let mut locations: HashMap<String, usize> = HashMap::new();
+
+    let mut pre_inst = Vec::new();
+    pre_inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::MARK)));
+    pre_inst.push(MetaAsm::Inst(MetaInst::new_label(
+        ByteCode::LOADC,
+        "main".to_string(),
+    )));
+    pre_inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::CALL)));
+    pre_inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::HALT)));
+
+    pre_inst.extend(inst);
+    let inst = pre_inst;
+
+    let mut meta_inst = Vec::new();
+    for i in inst {
+        match i {
+            MetaAsm::Inst(i) => meta_inst.push(i),
+            MetaAsm::Lbl(s) => {
+                locations.insert(s, meta_inst.len());
+            }
+        }
+    }
+
+    println!("Locations: {:?}", &locations);
+
+    for i in meta_inst {
+        match i.var {
+            MetaVar::Data(d) => machine_inst.push(Inst::new_data(i.inst, d)),
+            MetaVar::Label(s) => {
+                machine_inst.push(Inst::new_data(
+                    i.inst,
+                    *locations.get(&s).clone().unwrap() as i64,
+                ));
+            }
+            MetaVar::LocalAlloc(id) => {
+                let locals = ctx.locals.get(&id).unwrap();
+                machine_inst.push(Inst::new_data(i.inst, *locals as i64))
+            }
+            MetaVar::None => machine_inst.push(Inst::new_inst(i.inst)),
+        }
+    }
+
+    //    machine_inst.push(Inst::new_inst(ByteCode::HALT));
+    machine_inst
 }

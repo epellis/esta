@@ -4,43 +4,46 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct AsmCtx {
-    base: String,
-    scopes: HashMap<String, Stack<Alloc>>,
-    suffix: usize,
+    base: String,                          // Tracks which function is being built
+    scopes: HashMap<String, Stack<Alloc>>, // Tracks all scoped variables and their locations
+    pub locals: HashMap<String, usize>,    // Tracks all local variables allocated within a function
+    suffix: usize,                         // Keeps a unique suffix for each label
 }
 
 impl AsmCtx {
     pub fn new() -> AsmCtx {
-        let mut me = AsmCtx {
-            base: "main".to_string(),
+        AsmCtx {
+            base: "GLOBAL".to_string(),
             scopes: HashMap::new(),
+            locals: HashMap::new(),
             suffix: 0,
-        };
-        me.add_fun("main");
-        me
+        }
     }
     pub fn next_label(&mut self) -> String {
         self.suffix += 1;
         format!("{}_{}", self.base, self.suffix)
     }
     pub fn push_scope(&mut self) {
-        println!("Pushing Scope");
         self.scopes.get_mut(&self.base).unwrap().push(Alloc::new());
     }
     pub fn pop_scope(&mut self) {
-        println!("Popping Scope");
         self.scopes.get_mut(&self.base).unwrap().pop();
     }
     pub fn add_fun(&mut self, id: &str) {
         self.base = id.to_string();
         self.scopes.insert(self.base.clone(), Stack::new());
+        self.locals.insert(self.base.clone(), 0);
+        self.push_scope();
     }
     pub fn pop_fun(&mut self) {
-        self.base = "main".to_string();
+        self.pop_scope();
+        self.base = "GLOBAL".to_string();
     }
     // TODO: This is begging for some and_then() combinators
     // TODO: Also clean up pop/push
     pub fn define(&mut self, id: &str) {
+        let local = self.locals.get_mut(&self.base).unwrap();
+        *local += 1;
         let stack = self.scopes.get_mut(&self.base).unwrap();
         let mut top = stack.pop().unwrap();
         top.define(id);

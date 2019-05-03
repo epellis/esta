@@ -100,6 +100,10 @@ impl MetaInst {
         let var = MetaVar::Label(label);
         MetaInst { inst, var }
     }
+    pub fn new_local_alloc(inst: ByteCode, label: String) -> MetaInst {
+        let var = MetaVar::LocalAlloc(label);
+        MetaInst { inst, var }
+    }
     pub fn new_inst(inst: ByteCode) -> MetaInst {
         let var = MetaVar::None;
         MetaInst { inst, var }
@@ -115,6 +119,7 @@ impl MetaInst {
 pub enum MetaVar {
     Data(i64),
     Label(String),
+    LocalAlloc(String),
     None,
 }
 

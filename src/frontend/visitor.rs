@@ -21,6 +21,11 @@ pub fn walk_stmt<T, V: ?Sized + Visitor<T>>(v: &mut V, s: &Stmt) {
                 v.visit_stmt(stmt);
             }
         }
+        Stmt::FlatBlock(stmts) => {
+            for stmt in stmts {
+                v.visit_stmt(stmt);
+            }
+        }
         Stmt::While(test, body) => {
             v.visit_expr(test);
             v.visit_stmt(body);
