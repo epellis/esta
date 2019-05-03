@@ -1,16 +1,5 @@
 fun main() {
-    var a = 8;
-    var b = 4;
-    var c = a + b;
-    foo();
-    bar();
+    var a = 9;
+    return a;
 }
 
-fun foo() {
-    var a = 0;
-    var b = 0;
-}
-
-fun bar() {
-    var c = 0;
-}

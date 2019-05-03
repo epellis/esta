@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/epellis/esta.svg?style=svg)](https://circleci.com/gh/epellis/esta)
 
-Esta is a gradually typed, interpreted language of my own design written in Rust
+Esta is a gradually typed, interpreted language and virtual machine implementation of my own design written in Rust
 
 _Interpreted_: `.est` source code is compiled into byte code (simple assembly instructions)
                 and run on the Esta VM.

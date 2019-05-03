@@ -14,10 +14,9 @@ pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = frontend::run(input)?;
     let inst = backend::generate(stmts)?;
     for (j, i) in inst.iter().enumerate() {
-        println!("{} {}", j, i);
+        println!("{: >3} {}", j, i);
     }
     let mut vm = vm::VirtualMachine::new(inst);
     vm.run()?;
-    println!("Ran Successfully");
     Ok(())
 }

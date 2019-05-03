@@ -7,6 +7,7 @@ pub struct AsmCtx {
     base: String,                          // Tracks which function is being built
     scopes: HashMap<String, Stack<Alloc>>, // Tracks all scoped variables and their locations
     pub locals: HashMap<String, usize>,    // Tracks all local variables allocated within a function
+    pub args: usize,                       // Count number of args for current function
     suffix: usize,                         // Keeps a unique suffix for each label
 }
 
@@ -17,6 +18,7 @@ impl AsmCtx {
             scopes: HashMap::new(),
             locals: HashMap::new(),
             suffix: 0,
+            args: 0,
         }
     }
     pub fn next_label(&mut self) -> String {
@@ -49,7 +51,15 @@ impl AsmCtx {
         top.define(id);
         stack.push(top);
     }
-    pub fn get(&self, id: &str) -> Result<usize, &'static str> {
+    pub fn define_arg(&mut self, id: &str) {
+        //        let local = self.locals.get_mut(&self.base).unwrap();
+        //        *local += 1;
+        let stack = self.scopes.get_mut(&self.base).unwrap();
+        let mut top = stack.pop().unwrap();
+        top.define_arg(id);
+        stack.push(top);
+    }
+    pub fn get(&self, id: &str) -> Result<i64, &'static str> {
         let stack = self.scopes.get(&self.base).unwrap();
         for scope in stack.iter() {
             if scope.get(id).is_some() {

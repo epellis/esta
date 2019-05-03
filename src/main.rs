@@ -21,7 +21,7 @@ fn run_prompt() {
         io::stdin()
             .read_line(&mut buffer)
             .expect("Couldn't read input");
-        buffer.trim();
+        //        buffer.trim();
 
         match esta::run(&buffer) {
             Ok(()) => {}

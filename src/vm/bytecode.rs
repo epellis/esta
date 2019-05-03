@@ -14,6 +14,7 @@ pub enum ByteCode {
     MARK,   // Save context for function call setup
     CALL,   // Switch context between two functions
     ALLOC,  // Extend the stack by a given amount
+    SLIDE,  // Move the return value from the top of stack to top of FP
     RET,    // Return control to the caller
     NEW,    // Allocate space on the heap for an object the size of top of stack
     JUMP,   // Change the PC to a new value

@@ -26,6 +26,7 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
 // TODO: If we want to refactor into a Trait, each make_* is a necessary defined function implemented
 //  by the type that inherits this trait
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
+    println!("<{}>", s);
     match s {
         Stmt::Block(body) => make_block(ctx, body),
         Stmt::FlatBlock(body) => make_flat_block(ctx, body),
@@ -39,6 +40,7 @@ fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
 }
 
 fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
+    println!("<{}>", e);
     match &*e.expr {
         Expr::Identifier(id) => make_identifier(ctx, id, l_value),
         Expr::Literal(lit) => make_literal(ctx, lit),
@@ -123,7 +125,28 @@ fn make_while(mut ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> Dispat
 }
 
 fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
-    Err("Not Implemented")
+    let mut inst = Vec::new();
+    match value {
+        Some(rhs) => {
+            let rhs = dispatch_expr(ctx, rhs, false)?;
+            inst.extend(rhs);
+            inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, -3)));
+            inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STORE)));
+            //            inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
+            inst.push(MetaAsm::Inst(MetaInst::new_data(
+                ByteCode::RET,
+                ctx.args as i64 + 1,
+            )));
+        }
+        None => {
+            inst.push(MetaAsm::Inst(MetaInst::new_data(
+                ByteCode::RET,
+                ctx.args as i64 + 2,
+            )));
+        }
+    };
+
+    Ok(inst)
 }
 
 fn make_declaration(mut ctx: &mut AsmCtx, id: &String) -> DispatchRet {
@@ -139,12 +162,13 @@ fn make_fun(
     body: &Box<Stmt>,
 ) -> DispatchRet {
     ctx.add_fun(id);
+    ctx.args = args.len();
     let mut inst = Vec::new();
     inst.push(MetaAsm::Lbl(id.clone()));
 
     for var in args {
         if let Expr::Identifier(id) = &*var.expr {
-            ctx.define(&id);
+            ctx.define_arg(&id);
         }
     }
 
@@ -212,20 +236,34 @@ fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
 
 fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
     let mut inst = Vec::new();
+
+    // Allocate space for the function call arguments
+    inst.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::ALLOC,
+        args.len() as i64,
+    )));
+
+    // Push arguments to stack from right to left (e.g. backwards)
     for arg in args.iter().rev() {
-        let lhs = dispatch_expr(ctx, arg, false)?;
-        inst.extend(lhs);
+        let rhs = dispatch_expr(ctx, arg, false)?;
+        inst.extend(rhs);
     }
 
-    // Push space for the return variable
-    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0)));
-
+    // Save FP
     inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::MARK)));
+    // Calculate the starting address of the called function
     inst.push(MetaAsm::Inst(MetaInst::new_label(
         ByteCode::LOADC,
         id.clone(),
     )));
+    // Pass control over to the called function
     inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::CALL)));
+
+    // Once the called function returns, slide the return value to the top of the stack
+    inst.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::SLIDE,
+        args.len() as i64,
+    )));
 
     Ok(inst)
 }
@@ -234,7 +272,10 @@ fn assemble(inst: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
     let mut machine_inst = Vec::new();
     let mut locations: HashMap<String, usize> = HashMap::new();
 
+    // TODO: Replace Return 3 with Return 3 + M where M is number of args passed to fun
+
     let mut pre_inst = Vec::new();
+    pre_inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::ALLOC, 1)));
     pre_inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::MARK)));
     pre_inst.push(MetaAsm::Inst(MetaInst::new_label(
         ByteCode::LOADC,
