@@ -3,7 +3,6 @@ mod assembly_context;
 
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt, Type};
-use crate::frontend::visitor::{walk_expr, walk_stmt, Visitor};
 use crate::vm::bytecode::*;
 use std::collections::HashMap;
 

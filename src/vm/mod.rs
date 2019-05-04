@@ -1,4 +1,5 @@
 pub mod bytecode;
+mod serialize;
 
 #[cfg(test)]
 mod tests;

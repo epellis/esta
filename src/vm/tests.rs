@@ -1,5 +1,22 @@
 use crate::vm::bytecode::*;
+use crate::vm::serialize::*;
 use crate::vm::*;
+
+#[test]
+fn test_convert_raw() {
+    let raw = "ALLOC 1
+    LOADRC 3
+    HALT";
+    let res = Converter::raw_to_inst(raw);
+    assert_eq!(
+        Ok(vec![
+            Inst::new_data(ByteCode::ALLOC, 1),
+            Inst::new_data(ByteCode::LOADRC, 3),
+            Inst::new_inst(ByteCode::HALT)
+        ]),
+        res
+    )
+}
 
 #[test]
 fn test_empty_main() {

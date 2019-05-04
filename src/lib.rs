@@ -10,6 +10,10 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate strum;
+#[macro_use]
+extern crate strum_macros;
+
 pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = frontend::run(input)?;
     let inst = backend::generate(stmts)?;

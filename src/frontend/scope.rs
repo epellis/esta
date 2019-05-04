@@ -1,7 +1,6 @@
 use super::visitor::{walk_expr, walk_stmt, Visitor};
 use crate::frontend::ast::{Expr, ExprNode, Stmt};
 use std::collections::HashMap;
-use std::{error, fmt};
 
 /// Scope Checker
 ///

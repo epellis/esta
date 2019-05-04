@@ -2,7 +2,9 @@ use crate::frontend::ast::Opcode;
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+use strum::IntoEnumIterator;
+
+#[derive(Debug, Eq, PartialEq, Clone, EnumIter, Display)]
 pub enum ByteCode {
     LOADC,  // Push a value to the stack
     LOAD,   // Push a value at address specified in top of address to stack
@@ -60,9 +62,17 @@ lazy_static! {
         m.insert(Opcode::Sub, ByteCode::NEG);
         m
     };
+    pub static ref RAW_TO_BYTE: HashMap<String, ByteCode> = {
+        let mut m = HashMap::new();
+        for bytecode in ByteCode::iter() {
+            let str_rep = format!("{}", bytecode);
+            m.insert(str_rep, bytecode);
+        }
+        m
+    };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Inst {
     pub inst: ByteCode,
     pub data: Option<i64>,
