@@ -1,0 +1,8 @@
+fun main() {
+    var a = foo(3, 2);
+    return a;
+}
+
+fun foo(a, b) {
+    return a + b;
+}

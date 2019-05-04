@@ -12,7 +12,7 @@ impl Alloc {
         Alloc {
             scope: HashMap::new(),
             top: 0,
-            bot: -2,
+            bot: -3,
         }
     }
     pub fn define(&mut self, id: &str) {

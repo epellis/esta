@@ -26,5 +26,5 @@ impl Converter {
 }
 
 lazy_static! {
-    static ref RE_INST: Regex = Regex::new(r"([[:alpha:]]+)( [\d]+)?").unwrap();
+    static ref RE_INST: Regex = Regex::new(r"([[:alpha:]]+)( (-)?[\d]+)?").unwrap();
 }

@@ -4,6 +4,7 @@ mod assembly_context;
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt, Type};
 use crate::vm::bytecode::*;
+use std::cmp;
 use std::collections::HashMap;
 
 // TODO: Split off bool to t conversion funcs
@@ -25,7 +26,6 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
 // TODO: If we want to refactor into a Trait, each make_* is a necessary defined function implemented
 //  by the type that inherits this trait
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
-    println!("<{}>", s);
     match s {
         Stmt::Block(body) => make_block(ctx, body),
         Stmt::FlatBlock(body) => make_flat_block(ctx, body),
@@ -39,7 +39,6 @@ fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
 }
 
 fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
-    println!("<{}>", e);
     match &*e.expr {
         Expr::Identifier(id) => make_identifier(ctx, id, l_value),
         Expr::Literal(lit) => make_literal(ctx, lit),
@@ -129,12 +128,16 @@ fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
         Some(rhs) => {
             let rhs = dispatch_expr(ctx, rhs, false)?;
             inst.extend(rhs);
-            inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, -3)));
+            inst.push(MetaAsm::Inst(MetaInst::new_data(
+                ByteCode::LOADRC,
+                -3,
+                //                -3 - ctx.args as i64,
+            )));
             inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STORE)));
-            //            inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
             inst.push(MetaAsm::Inst(MetaInst::new_data(
                 ByteCode::RET,
-                ctx.args as i64 + 1,
+                2,
+                //                cmp::max(0, ctx.args as i64) + 1,
             )));
         }
         None => {
@@ -144,6 +147,7 @@ fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
             )));
         }
     };
+    //    inst.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::POP)));
 
     Ok(inst)
 }
@@ -175,6 +179,8 @@ fn make_fun(
         ByteCode::ALLOC,
         id.clone(),
     )));
+
+    //    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::ALLOC, 1)));
 
     inst.extend(dispatch_stmt(ctx, body)?);
     inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
@@ -236,11 +242,8 @@ fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
 fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
     let mut inst = Vec::new();
 
-    // Allocate space for the function call arguments
-    inst.push(MetaAsm::Inst(MetaInst::new_data(
-        ByteCode::ALLOC,
-        args.len() as i64,
-    )));
+    // Allocate space for the return value
+    inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::ALLOC, 1)));
 
     // Push arguments to stack from right to left (e.g. backwards)
     for arg in args.iter().rev() {
@@ -267,11 +270,10 @@ fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> Dispatch
     Ok(inst)
 }
 
+// TODO: Spit this up into a few stages
 fn assemble(inst: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
     let mut machine_inst = Vec::new();
     let mut locations: HashMap<String, usize> = HashMap::new();
-
-    // TODO: Replace Return 3 with Return 3 + M where M is number of args passed to fun
 
     let mut pre_inst = Vec::new();
     pre_inst.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::ALLOC, 1)));

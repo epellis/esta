@@ -6,12 +6,14 @@ use crate::vm::*;
 fn test_convert_raw() {
     let raw = "ALLOC 1
     LOADRC 3
+    LOADRC -3
     HALT";
     let res = Converter::raw_to_inst(raw);
     assert_eq!(
         Ok(vec![
             Inst::new_data(ByteCode::ALLOC, 1),
             Inst::new_data(ByteCode::LOADRC, 3),
+            Inst::new_data(ByteCode::LOADRC, -3),
             Inst::new_inst(ByteCode::HALT)
         ]),
         res
@@ -20,14 +22,15 @@ fn test_convert_raw() {
 
 #[test]
 fn test_empty_main() {
-    let instructions: Vec<Inst> = vec![
-        Inst::new_data(ByteCode::ALLOC, 1),
-        Inst::new_inst(ByteCode::MARK),
-        Inst::new_data(ByteCode::LOADC, 5),
-        Inst::new_inst(ByteCode::CALL),
-        Inst::new_inst(ByteCode::HALT),
-        Inst::new_data(ByteCode::RET, 2),
-    ];
+    let raw = "ALLOC 1
+    MARK
+    LOADC 5
+    CALL
+    HALT
+    ALLOC 0
+    RET 2";
+    let instructions = Converter::raw_to_inst(raw).unwrap();
+    println!("{:?}", instructions);
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
@@ -50,19 +53,18 @@ fn test_empty_main() {
 /// }
 /// ```
 fn test_returning_main() {
-    let instructions: Vec<Inst> = vec![
-        Inst::new_data(ByteCode::ALLOC, 1),
-        Inst::new_inst(ByteCode::MARK),
-        Inst::new_data(ByteCode::LOADC, 5),
-        Inst::new_inst(ByteCode::CALL),
-        Inst::new_inst(ByteCode::HALT),
-        Inst::new_data(ByteCode::ALLOC, 0),
-        Inst::new_data(ByteCode::LOADC, 9),
-        Inst::new_data(ByteCode::LOADRC, -3),
-        Inst::new_inst(ByteCode::STORE),
-        Inst::new_data(ByteCode::RET, 1),
-        Inst::new_data(ByteCode::RET, 2),
-    ];
+    let raw = "ALLOC 1
+    MARK
+    LOADC 5
+    CALL
+    HALT
+    ALLOC 0
+    LOADC 9
+    LOADRC -3
+    STORE
+    RET 1
+    RET 2";
+    let instructions = Converter::raw_to_inst(raw).unwrap();
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
@@ -82,29 +84,28 @@ fn test_returning_main() {
 /// # Function
 /// '''
 /// fun main() {
-//    var a = 9;
-//    return a;
-//  }
+///    var a = 9;
+///    return a;
+///  }
 /// ```
 fn test_returning_main_var() {
-    let instructions: Vec<Inst> = vec![
-        Inst::new_data(ByteCode::ALLOC, 1),
-        Inst::new_inst(ByteCode::MARK),
-        Inst::new_data(ByteCode::LOADC, 5),
-        Inst::new_inst(ByteCode::CALL),
-        Inst::new_inst(ByteCode::HALT),
-        Inst::new_data(ByteCode::ALLOC, 1),
-        Inst::new_data(ByteCode::LOADC, 9),
-        Inst::new_data(ByteCode::LOADRC, 0),
-        Inst::new_inst(ByteCode::STORE),
-        Inst::new_inst(ByteCode::POP),
-        Inst::new_data(ByteCode::LOADRC, 0),
-        Inst::new_inst(ByteCode::LOAD),
-        Inst::new_data(ByteCode::LOADRC, -3),
-        Inst::new_inst(ByteCode::STORE),
-        Inst::new_data(ByteCode::RET, 1),
-        Inst::new_data(ByteCode::RET, 2),
-    ];
+    let raw = "ALLOC 1
+    MARK
+    LOADC 5
+    CALL
+    HALT
+    ALLOC 1
+    LOADC 3
+    LOADRC 0
+    STORE
+    POP
+    LOADRC 0
+    LOAD
+    LOADRC -3
+    STORE
+    RET 1
+    RET 2";
+    let instructions = Converter::raw_to_inst(raw).unwrap();
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
@@ -117,7 +118,7 @@ fn test_returning_main_var() {
         }
     }
     assert_eq!(count < max_count, true);
-    assert_eq!(9, vm.stack[0]);
+    assert_eq!(3, vm.stack[0]);
 }
 
 #[test]

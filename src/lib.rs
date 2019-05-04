@@ -20,6 +20,9 @@ pub fn run(input: &str) -> Result<(), &'static str> {
     for (j, i) in inst.iter().enumerate() {
         println!("{: >3} {}", j, i);
     }
+    //    for i in inst.iter() {
+    //        println!("{}", i);
+    //    }
     let mut vm = vm::VirtualMachine::new(inst);
     vm.run()?;
     Ok(())

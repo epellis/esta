@@ -1,5 +1,8 @@
 fun main() {
-    var a = 9;
+    var a = foo(7);
     return a;
 }
 
+fun foo(a) {
+    return a;
+}

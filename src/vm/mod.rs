@@ -97,6 +97,7 @@ impl VirtualMachine {
             ByteCode::SLIDE => {
                 println!("Old Top: {}", self.stack.len());
                 let ret_value = self.top()?.clone();
+                println!("I am going to return {}", ret_value);
                 for _ in 0..=ir.data.unwrap() {
                     self.pop()?;
                 }

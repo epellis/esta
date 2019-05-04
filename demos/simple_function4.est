@@ -1,0 +1,13 @@
+fun main() {
+    var a = foo(3, 2);
+    return a;
+}
+
+fun foo(a, b) {
+    a = bar(a);
+    return a + bar(b);
+}
+
+fun bar(a) {
+    return a;
+}
