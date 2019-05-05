@@ -30,13 +30,10 @@ fn test_empty_main() {
     ALLOC 0
     RET 2";
     let instructions = Converter::raw_to_inst(raw).unwrap();
-    println!("{:?}", instructions);
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
-    println!("{}", vm.info());
     while let Ok(StepCode::CONTINUE) = vm.step() {
-        println!("{}", vm.info());
         count += 1;
         if count > max_count {
             break;
@@ -68,9 +65,7 @@ fn test_returning_main() {
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
-    println!("{}", vm.info());
     while let Ok(StepCode::CONTINUE) = vm.step() {
-        println!("{}", vm.info());
         count += 1;
         if count > max_count {
             break;
@@ -109,9 +104,7 @@ fn test_returning_main_var() {
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
     let mut count = 0;
     let max_count = 20;
-    println!("{}", vm.info());
     while let Ok(StepCode::CONTINUE) = vm.step() {
-        println!("{}", vm.info());
         count += 1;
         if count > max_count {
             break;
@@ -125,7 +118,6 @@ fn test_returning_main_var() {
 fn test_halt() {
     let instructions: Vec<Inst> = vec![Inst::new_inst(ByteCode::HALT)];
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
-    println!("{:?}", vm);
     assert_eq!(vm.run().is_ok(), true);
 }
 
@@ -253,7 +245,6 @@ fn test_sub() {
         Inst::new_inst(ByteCode::HALT),
     ];
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
-    println!("{:?}", vm);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -287,7 +278,7 @@ fn test_div() {
 #[test]
 fn test_mod() {
     let instructions: Vec<Inst> = vec![
-        Inst::new_data(ByteCode::LOADC, 2),
+        Inst::new_data(ByteCode::LOADC, 4),
         Inst::new_data(ByteCode::LOADC, 2),
         Inst::new_inst(ByteCode::MOD),
         Inst::new_inst(ByteCode::HALT),

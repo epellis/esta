@@ -3,12 +3,10 @@ mod assembly_context;
 
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt, Type};
+use crate::util::{bool_to_i64, i64_to_bool};
 use crate::vm::bytecode::*;
 use std::cmp;
 use std::collections::HashMap;
-
-// TODO: Split off bool to t conversion funcs
-use crate::vm::VirtualMachine;
 
 type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
@@ -45,13 +43,11 @@ fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
     }
 }
 
-// TODO: May be able to use a try_fold() iterator on this one
 fn make_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
-    let mut insts = Vec::new();
     ctx.push_scope();
+    let mut insts = Vec::new();
     for b in body {
-        let sub_inst = dispatch_stmt(ctx, b)?;
-        insts.extend(sub_inst);
+        insts.extend(dispatch_stmt(ctx, b)?);
     }
     ctx.pop_scope();
     Ok(insts)
@@ -60,8 +56,7 @@ fn make_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
 fn make_flat_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
     let mut insts = Vec::new();
     for b in body {
-        let sub_inst = dispatch_stmt(ctx, b)?;
-        insts.extend(sub_inst);
+        insts.extend(dispatch_stmt(ctx, b)?);
     }
     Ok(insts)
 }
@@ -120,17 +115,9 @@ fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
         Some(rhs) => {
             let rhs = dispatch_expr(ctx, rhs, false)?;
             insts.extend(rhs);
-            insts.push(MetaAsm::Inst(MetaInst::new_data(
-                ByteCode::LOADRC,
-                -3,
-                //                -3 - ctx.args as i64,
-            )));
+            insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, -3)));
             insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STORE)));
-            insts.push(MetaAsm::Inst(MetaInst::new_data(
-                ByteCode::RET,
-                2,
-                //                cmp::max(0, ctx.args as i64) + 1,
-            )));
+            insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
         }
         None => {
             insts.push(MetaAsm::Inst(MetaInst::new_data(
@@ -139,7 +126,6 @@ fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
             )));
         }
     };
-    //    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::POP)));
 
     Ok(insts)
 }
@@ -171,8 +157,6 @@ fn make_fun(
         ByteCode::ALLOC,
         id.clone(),
     )));
-
-    //    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::ALLOC, 1)));
 
     insts.extend(dispatch_stmt(ctx, body)?);
     insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
@@ -209,7 +193,7 @@ fn make_literal(_ctx: &mut AsmCtx, lit: &Literal) -> DispatchRet {
         Literal::Number(num) => vec![MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, *num))],
         Literal::Boolean(bool) => vec![MetaAsm::Inst(MetaInst::new_data(
             ByteCode::LOADC,
-            VirtualMachine::bool_to_t(*bool),
+            bool_to_i64(*bool),
         ))],
         _ => Vec::new(),
     };

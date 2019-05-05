@@ -41,23 +41,20 @@ impl AsmCtx {
         self.pop_scope();
         self.base = "GLOBAL".to_string();
     }
-    // TODO: This is begging for some and_then() combinators
-    // TODO: Also clean up pop/push
     pub fn define(&mut self, id: &str) {
-        let local = self.locals.get_mut(&self.base).unwrap();
-        *local += 1;
-        let stack = self.scopes.get_mut(&self.base).unwrap();
-        let mut top = stack.pop().unwrap();
-        top.define(id);
-        stack.push(top);
+        *self.locals.get_mut(&self.base).unwrap() += 1;
+        self.scopes
+            .get_mut(&self.base)
+            .and_then(|s| s.top())
+            .unwrap()
+            .define(id);
     }
     pub fn define_arg(&mut self, id: &str) {
-        //        let local = self.locals.get_mut(&self.base).unwrap();
-        //        *local += 1;
-        let stack = self.scopes.get_mut(&self.base).unwrap();
-        let mut top = stack.pop().unwrap();
-        top.define_arg(id);
-        stack.push(top);
+        self.scopes
+            .get_mut(&self.base)
+            .and_then(|s| s.top())
+            .unwrap()
+            .define_arg(id);
     }
     pub fn get(&self, id: &str) -> Result<i64, &'static str> {
         let stack = self.scopes.get(&self.base).unwrap();

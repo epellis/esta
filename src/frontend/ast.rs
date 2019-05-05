@@ -63,7 +63,6 @@ pub enum Type {
 /// Opcodes
 ///
 /// Opcodes are fundamental operations on (usually) two operands
-/// TODO: Add Modulo %
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Opcode {
     // Mathematics
@@ -71,6 +70,7 @@ pub enum Opcode {
     Sub,
     Mul,
     Div,
+    Mod,
     // Boolean
     Greater,
     GreaterEqual,
@@ -209,6 +209,7 @@ impl fmt::Display for Opcode {
             Opcode::Sub => write!(f, "-"),
             Opcode::Mul => write!(f, "*"),
             Opcode::Div => write!(f, "/"),
+            Opcode::Mod => write!(f, "%"),
             Opcode::Greater => write!(f, ">"),
             Opcode::GreaterEqual => write!(f, ">="),
             Opcode::Lesser => write!(f, "<"),

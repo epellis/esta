@@ -32,7 +32,6 @@
 //    }
 //
 //    pub fn define(&mut self, id: &str) {
-//        // TODO: Find a less destructive way of pushing to the upper stack
 //        let mut top = self.enclosures.pop().expect("popped the global stack");
 //        //        top.insert(id.to_string(), val.clone());
 //        top.insert(id.to_string(), ExprNode::new_nil());

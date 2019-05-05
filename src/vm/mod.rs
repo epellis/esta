@@ -5,7 +5,7 @@ mod serialize;
 mod tests;
 
 use self::bytecode::{ByteCode, Inst};
-use crate::LOGGER;
+use crate::util::{bool_to_i64, i64_to_bool};
 use std::cmp::PartialOrd;
 use std::fmt::Debug;
 
@@ -37,7 +37,7 @@ impl VirtualMachine {
 
     pub fn run(&mut self) -> Result<(), &'static str> {
         while let StepCode::CONTINUE = self.step()? {
-            info!(LOGGER, "{}", self.info());
+            debug!("{}", self.info());
         }
         Ok(())
     }
@@ -77,16 +77,16 @@ impl VirtualMachine {
                 self.stack.push(fp);
             }
             ByteCode::CALL => {
-                info!(LOGGER, "Old PC: {}", self.pc);
-                info!(LOGGER, "Old FP: {}", self.fp);
+                debug!("Old PC: {}", self.pc);
+                debug!("Old FP: {}", self.fp);
 
                 self.fp = self.stack.len();
                 let tmp = self.pc as i64;
                 self.pc = self.pop()? as usize;
                 self.push(tmp);
 
-                info!(LOGGER, "New PC: {}", self.pc);
-                info!(LOGGER, "New FP: {}", self.fp);
+                debug!("New PC: {}", self.pc);
+                debug!("New FP: {}", self.fp);
             }
             ByteCode::ALLOC => {
                 for _ in 0..ir.data.unwrap() {
@@ -94,18 +94,18 @@ impl VirtualMachine {
                 }
             }
             ByteCode::SLIDE => {
-                info!(LOGGER, "Old PC: {}", self.pc);
+                debug!("Old PC: {}", self.pc);
                 let ret_value = *self.top()?;
-                info!(LOGGER, "Sliding: {}", ret_value);
+                debug!("Sliding: {}", ret_value);
                 for _ in 0..=ir.data.unwrap() {
                     self.pop()?;
                 }
                 self.push(ret_value);
-                info!(LOGGER, "New top: {}", self.top()?);
+                debug!("New top: {}", self.top()?);
             }
             ByteCode::RET => {
-                info!(LOGGER, "Old PC: {}", self.pc);
-                info!(LOGGER, "Old FP: {}", self.fp);
+                debug!("Old PC: {}", self.pc);
+                debug!("Old FP: {}", self.fp);
                 let new_sp = self.fp as i64 - ir.data.unwrap();
                 self.pc = self.stack[self.fp - 1] as usize;
                 let new_fp = self.stack[self.fp - 2] as usize;
@@ -115,8 +115,8 @@ impl VirtualMachine {
                 }
 
                 self.fp = new_fp;
-                info!(LOGGER, "Restored PC: {}", self.pc);
-                info!(LOGGER, "Restored FP: {}", self.fp);
+                debug!("Restored PC: {}", self.pc);
+                debug!("Restored FP: {}", self.fp);
             }
             ByteCode::NEW => {
                 let heap_top = self.heap.len() as usize;
@@ -139,7 +139,6 @@ impl VirtualMachine {
             }
             ByteCode::ADD => {
                 let res = self.pop()? + self.pop()?;
-                println!("{}", res);
                 self.push(res);
             }
             ByteCode::SUB => {
@@ -157,54 +156,55 @@ impl VirtualMachine {
                 self.push(rhs / lhs);
             }
             ByteCode::MOD => {
-                let res = self.pop()? % self.pop()?;
-                self.push(res);
+                let lhs = self.pop()?;
+                let rhs = self.pop()?;
+                self.push(rhs % lhs);
             }
             ByteCode::AND => {
-                let lhs = VirtualMachine::t_to_bool(self.pop()?);
-                let rhs = VirtualMachine::t_to_bool(self.pop()?);
-                self.push(VirtualMachine::bool_to_t(lhs && rhs));
+                let lhs = i64_to_bool(self.pop()?);
+                let rhs = i64_to_bool(self.pop()?);
+                self.push(bool_to_i64(lhs && rhs));
             }
             ByteCode::OR => {
-                let lhs = VirtualMachine::t_to_bool(self.pop()?);
-                let rhs = VirtualMachine::t_to_bool(self.pop()?);
-                self.push(VirtualMachine::bool_to_t(lhs || rhs));
+                let lhs = i64_to_bool(self.pop()?);
+                let rhs = i64_to_bool(self.pop()?);
+                self.push(bool_to_i64(lhs || rhs));
             }
             ByteCode::EQ => {
                 let res = self.pop()? == self.pop()?;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::NEQ => {
                 let res = self.pop()? != self.pop()?;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::LE => {
                 let (a, b) = (self.pop()?, self.pop()?);
                 let res = b < a;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::LEQ => {
                 let (a, b) = (self.pop()?, self.pop()?);
                 let res = b <= a;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::GE => {
                 let (a, b) = (self.pop()?, self.pop()?);
                 let res = b > a;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::GEQ => {
                 let (a, b) = (self.pop()?, self.pop()?);
                 let res = b >= a;
-                self.push(VirtualMachine::bool_to_t(res));
+                self.push(bool_to_i64(res));
             }
             ByteCode::NEG => {
                 let res = self.pop()?.checked_neg().unwrap();
                 self.push(res);
             }
             ByteCode::NOT => {
-                let res = !VirtualMachine::t_to_bool(self.pop()?);
-                self.push(VirtualMachine::bool_to_t(res));
+                let res = !i64_to_bool(self.pop()?);
+                self.push(bool_to_i64(res));
             }
         }
         Ok(StepCode::CONTINUE)
@@ -225,18 +225,6 @@ impl VirtualMachine {
         let top = *self.top()?;
         self.stack.pop();
         Ok(top)
-    }
-
-    pub fn bool_to_t(cond: bool) -> i64 {
-        if cond {
-            1
-        } else {
-            0
-        }
-    }
-
-    pub fn t_to_bool(cond: i64) -> bool {
-        cond == 1
     }
 
     pub fn info(&self) -> String {

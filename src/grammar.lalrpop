@@ -55,7 +55,6 @@ Stmt: Box<Stmt> = {
     <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(ExprNode::new_nil(), proc)),
 };
 
-// TODO: This is wrong. It creates a scope and shadows the declaration.
 DeclStmt: Box<Stmt> = {
     "var" <id:Identifier> "=" <rhs:Expr> => {
         let mut block = Vec::new();
@@ -176,6 +175,7 @@ CompareOp: Opcode = {
 MultOp: Opcode = {
     "*" => Opcode::Mul,
     "/" => Opcode::Div,
+    "%" => Opcode::Mod,
 };
 
 AddOp: Opcode = {

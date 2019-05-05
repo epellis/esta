@@ -46,6 +46,7 @@ lazy_static! {
         m.insert(Opcode::Sub, ByteCode::SUB);
         m.insert(Opcode::Mul, ByteCode::MUL);
         m.insert(Opcode::Div, ByteCode::DIV);
+        m.insert(Opcode::Mod, ByteCode::MOD);
         m.insert(Opcode::Greater, ByteCode::GE);
         m.insert(Opcode::GreaterEqual, ByteCode::GEQ);
         m.insert(Opcode::Lesser, ByteCode::LE);

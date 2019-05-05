@@ -37,7 +37,7 @@ You are welcome to check the project out and try some of the demos provided.
 git clone https://github.com/epellis/esta.git
 cd esta
 cargo build
-cargo run demos/hello.est
+RUST_LOG=esta=debug cargo run demos/hello.est
 ```
 
 ## Deployment

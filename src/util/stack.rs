@@ -7,19 +7,15 @@ impl<T> Stack<T> {
     pub fn new() -> Self {
         Stack { stack: Vec::new() }
     }
-
-    pub fn top(&self) -> Option<&T> {
-        self.stack.last()
+    pub fn top(&mut self) -> Option<&mut T> {
+        self.stack.last_mut()
     }
-
     pub fn pop(&mut self) -> Option<T> {
         self.stack.pop()
     }
-
     pub fn push(&mut self, val: T) {
         self.stack.push(val);
     }
-
     pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             stack: &self.stack,

@@ -4,7 +4,13 @@ use std::io;
 use std::io::Write;
 use std::process;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 fn main() {
+    env_logger::builder().default_format_timestamp(false).init();
+
     let args: Vec<String> = env::args().collect();
 
     match args.len() {
@@ -22,7 +28,6 @@ fn run_prompt() {
         io::stdin()
             .read_line(&mut buffer)
             .expect("Couldn't read input");
-        //        buffer.trim();
 
         match esta::run(&buffer) {
             Ok(()) => {}
