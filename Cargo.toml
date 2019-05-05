@@ -20,6 +20,6 @@ env_logger = "0.6.1"
 criterion = "0.2"
 
 [[bench]]
-path = "./src/benches/fibonacci_bench.rs"
+path = "./benches/fibonacci_bench.rs"
 name = "fibonacci_bench"
 harness = false

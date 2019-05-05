@@ -6,8 +6,6 @@ mod tests;
 
 use self::bytecode::{ByteCode, Inst};
 use crate::util::{bool_to_i64, i64_to_bool};
-use std::cmp::PartialOrd;
-use std::fmt::Debug;
 
 pub enum StepCode {
     HALT,

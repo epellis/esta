@@ -1,0 +1,4 @@
+fun main() {
+    var a = True;
+    return a;
+}

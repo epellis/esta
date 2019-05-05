@@ -92,9 +92,6 @@ impl ExprNode {
         }
     }
 
-    /// Create a new expression with an indeterminate type
-    ///
-    /// This function will attempt to find the type by searching it's children
     pub fn new_untyped(expr: Expr) -> ExprNode {
         //        let type_of = expr.type_of();
         let type_of = Type::Nil;

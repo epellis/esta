@@ -4,9 +4,8 @@ use std::io;
 use std::io::Write;
 use std::process;
 
-#[macro_use]
-extern crate log;
 extern crate env_logger;
+extern crate log;
 
 fn main() {
     env_logger::builder().default_format_timestamp(false).init();

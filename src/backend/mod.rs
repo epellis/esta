@@ -3,9 +3,8 @@ mod assembly_context;
 
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt, Type};
-use crate::util::{bool_to_i64, i64_to_bool};
+use crate::util::bool_to_i64;
 use crate::vm::bytecode::*;
-use std::cmp;
 use std::collections::HashMap;
 
 type DispatchRet = Result<Vec<MetaAsm>, &'static str>;

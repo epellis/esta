@@ -1,6 +1,8 @@
 # Esta
 
-[![CircleCI](https://circleci.com/gh/epellis/esta.svg?style=svg)](https://circleci.com/gh/epellis/esta)
+[![CircleCI](https://circleci.com/gh/epellis/esta.svg?style=shield)](https://circleci.com/gh/epellis/esta)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/epellis/esta.svg?style=popout-square)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/epellis/esta.svg?style=popout-square)
 
 Esta is a gradually typed, interpreted language and virtual machine implementation of my own design written in Rust
 
