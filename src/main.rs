@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
+use std::process;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -34,8 +35,12 @@ fn run_prompt() {
 
 fn run_file(path: &str) {
     let buffer = fs::read_to_string(path).expect("Couldn't read file!");
-    match esta::run(&buffer) {
-        Ok(()) => {}
-        Err(why) => eprintln!("{}", why),
+    let result = match esta::run(&buffer) {
+        Ok(()) => 0,
+        Err(why) => {
+            eprintln!("{}", why);
+            1
+        }
     };
+    process::exit(result);
 }

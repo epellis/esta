@@ -4,8 +4,10 @@ use regex::Regex;
 
 /// Takes a string of text and deserialize it into valid (hopefully) bytecode
 /// or vice versa
+#[allow(dead_code)]
 pub struct Converter {}
 
+#[allow(dead_code)]
 impl Converter {
     pub fn raw_to_inst(raw: &str) -> Result<Vec<Inst>, &'static str> {
         let mut inst = Vec::new();

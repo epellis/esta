@@ -1,10 +1,8 @@
 pub mod ast;
-mod expand;
 pub mod scope;
 pub mod visitor;
 
 use self::ast::Stmt;
-use self::expand::Expand;
 
 lalrpop_mod!(grammar);
 
@@ -15,10 +13,9 @@ pub fn run(input: &str) -> Result<Stmt, &'static str> {
         .parse(input)
         .map_err(|_| "Parsing Error")?;
     let stmts = Stmt::FlatBlock(stmts);
-    let stmts = Expand::expand(stmts)?;
     // TODO: Discover all variables in a given scope
     //    let stmts = scope::discover_scope(stmts)?;
-    println!("{}", stmts);
+    //    println!("{}", stmts);
     Ok(stmts)
 }
 
@@ -49,33 +46,6 @@ mod tests {
         let result = frontend::run(input);
         assert_eq!(result.is_ok(), true);
     }
-
-    // TODO: Throw error on bad scope cause its killin' our Travis CI Build mayn! :(
-
-    //    #[test]
-    //    fn test_assign() {
-    //        let input = "var a = 1;";
-    //        let result = frontend::run(input);
-    //        assert_eq!(result.is_ok(), true);
-    //
-    //        // Err because b is not initialized
-    //        let input = "var a = b;";
-    //        let result = frontend::run(input);
-    //        assert_eq!(result.is_err(), true);
-    //
-    //        let input = "var a = 1 + 2;";
-    //        let result = frontend::run(input);
-    //        assert_eq!(result.is_ok(), true);
-    //
-    //        // Err because a is not assigned
-    //        let input = "a = 2;";
-    //        let result = frontend::run(input);
-    //        assert_eq!(result.is_err(), true);
-    //
-    //        let input = "var a; a = 2;";
-    //        let result = frontend::run(input);
-    //        assert_eq!(result.is_ok(), true);
-    //    }
 
     #[test]
     fn test_op() {

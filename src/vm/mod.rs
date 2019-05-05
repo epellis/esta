@@ -5,11 +5,9 @@ mod serialize;
 mod tests;
 
 use self::bytecode::{ByteCode, Inst};
+use crate::LOGGER;
 use std::cmp::PartialOrd;
 use std::fmt::Debug;
-
-// TODO: Make a string parsing utility to read in ASM instructions and
-//  execute them
 
 pub enum StepCode {
     HALT,
@@ -17,6 +15,7 @@ pub enum StepCode {
 }
 
 /// The Esta Virtual Machine
+#[derive(Debug)]
 pub struct VirtualMachine {
     stack: Vec<i64>,
     heap: Vec<i64>,
@@ -38,7 +37,7 @@ impl VirtualMachine {
 
     pub fn run(&mut self) -> Result<(), &'static str> {
         while let StepCode::CONTINUE = self.step()? {
-            println!("{}", self.info());
+            info!(LOGGER, "{}", self.info());
         }
         Ok(())
     }
@@ -48,14 +47,14 @@ impl VirtualMachine {
         self.pc += 1;
 
         match ir.inst {
-            ByteCode::LOADC => self.push(ir.data.clone().unwrap()),
+            ByteCode::LOADC => self.push(ir.data.unwrap()),
             ByteCode::LOAD => {
                 let addr: usize = self.pop()? as usize;
-                self.push(self.stack[addr].clone());
+                self.push(self.stack[addr]);
             }
             ByteCode::LOADA => {
                 let addr: usize = ir.data.unwrap() as usize;
-                self.push(self.stack[addr].clone());
+                self.push(self.stack[addr]);
             }
             ByteCode::LOADRC => {
                 let val = ir.data.unwrap() + self.fp as i64;
@@ -67,7 +66,7 @@ impl VirtualMachine {
                 if self.stack.len() <= addr {
                     self.stack.resize(addr + 1, 0);
                 }
-                self.stack[addr] = self.top()?.clone();
+                self.stack[addr] = *self.top()?;
             }
             ByteCode::POP => {
                 self.pop()?;
@@ -78,16 +77,16 @@ impl VirtualMachine {
                 self.stack.push(fp);
             }
             ByteCode::CALL => {
-                println!("Old PC: {}", self.pc);
-                println!("Old FP: {}", self.fp);
+                info!(LOGGER, "Old PC: {}", self.pc);
+                info!(LOGGER, "Old FP: {}", self.fp);
 
                 self.fp = self.stack.len();
                 let tmp = self.pc as i64;
                 self.pc = self.pop()? as usize;
                 self.push(tmp);
 
-                println!("New PC: {}", self.pc);
-                println!("New FP: {}", self.fp);
+                info!(LOGGER, "New PC: {}", self.pc);
+                info!(LOGGER, "New FP: {}", self.fp);
             }
             ByteCode::ALLOC => {
                 for _ in 0..ir.data.unwrap() {
@@ -95,18 +94,18 @@ impl VirtualMachine {
                 }
             }
             ByteCode::SLIDE => {
-                println!("Old Top: {}", self.stack.len());
-                let ret_value = self.top()?.clone();
-                println!("I am going to return {}", ret_value);
+                info!(LOGGER, "Old PC: {}", self.pc);
+                let ret_value = *self.top()?;
+                info!(LOGGER, "Sliding: {}", ret_value);
                 for _ in 0..=ir.data.unwrap() {
                     self.pop()?;
                 }
                 self.push(ret_value);
-                println!("New Top: {}", self.stack.len());
+                info!(LOGGER, "New top: {}", self.top()?);
             }
             ByteCode::RET => {
-                println!("Old PC: {}", self.pc);
-                println!("Old FP: {}", self.fp);
+                info!(LOGGER, "Old PC: {}", self.pc);
+                info!(LOGGER, "Old FP: {}", self.fp);
                 let new_sp = self.fp as i64 - ir.data.unwrap();
                 self.pc = self.stack[self.fp - 1] as usize;
                 let new_fp = self.stack[self.fp - 2] as usize;
@@ -116,8 +115,8 @@ impl VirtualMachine {
                 }
 
                 self.fp = new_fp;
-                println!("Restoring PC: {}", self.pc);
-                println!("Restoring FP: {}", self.fp);
+                info!(LOGGER, "Restored PC: {}", self.pc);
+                info!(LOGGER, "Restored FP: {}", self.fp);
             }
             ByteCode::NEW => {
                 let heap_top = self.heap.len() as usize;
@@ -126,10 +125,10 @@ impl VirtualMachine {
                 self.push(heap_top as i64);
             }
             ByteCode::JUMP => {
-                self.pc = ir.data.clone().unwrap() as usize;
+                self.pc = ir.data.unwrap() as usize;
             }
             ByteCode::JUMPZ => {
-                let new_pc = ir.data.clone().unwrap() as usize;
+                let new_pc = ir.data.unwrap() as usize;
                 if self.pop()? == 0 {
                     self.pc = new_pc;
                 }
@@ -140,6 +139,7 @@ impl VirtualMachine {
             }
             ByteCode::ADD => {
                 let res = self.pop()? + self.pop()?;
+                println!("{}", res);
                 self.push(res);
             }
             ByteCode::SUB => {
@@ -222,15 +222,16 @@ impl VirtualMachine {
 
     #[inline]
     fn pop(&mut self) -> Result<i64, &'static str> {
-        let top = self.top()?.clone();
+        let top = *self.top()?;
         self.stack.pop();
         Ok(top)
     }
 
     pub fn bool_to_t(cond: bool) -> i64 {
-        match cond {
-            true => 1,
-            false => 0,
+        if cond {
+            1
+        } else {
+            0
         }
     }
 

@@ -125,6 +125,7 @@ fn test_returning_main_var() {
 fn test_halt() {
     let instructions: Vec<Inst> = vec![Inst::new_inst(ByteCode::HALT)];
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    println!("{:?}", vm);
     assert_eq!(vm.run().is_ok(), true);
 }
 
@@ -252,6 +253,7 @@ fn test_sub() {
         Inst::new_inst(ByteCode::HALT),
     ];
     let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    println!("{:?}", vm);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }

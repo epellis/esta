@@ -13,3 +13,13 @@ lalrpop-util = "0.16.3"
 lazy_static = "1.3.0"
 strum = "0.15.0"
 strum_macros = "0.15.0"
+slog = "2.4.1"
+sloggers = "0.3.2"
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+path = "./src/benches/fibonacci_bench.rs"
+name = "fibonacci_bench"
+harness = false

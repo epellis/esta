@@ -1,0 +1,12 @@
+fun main() {
+    var n = 4;
+    n = fac(20);
+    return n;
+}
+
+fun fac(n) {
+    if n <= 0 {
+        return 1;
+    }
+    return n * fac(n-1);
+}
