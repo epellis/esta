@@ -1,49 +1,48 @@
-use std::fmt;
-
-/// Statement Abstract Parse Tree Node
-/// - Declaration: Define an identifier and bind it to the expression
-/// - Assignment: Binds an identifier to a new expression
-#[derive(Clone)]
+/// Statement AST
+///     Block: Scoped Block
+///     FlatBlock: Unscoped Block
+/// ...
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Block(Vec<Box<Stmt>>),
-    FlatBlock(Vec<Box<Stmt>>), // Does not create it's own scope
-    If(ExprNode, Box<Stmt>, Box<Stmt>),
-    While(ExprNode, Box<Stmt>),
-    Return(Option<ExprNode>),
-    Declaration(String),
-    FunDecl(String, Vec<ExprNode>, Type, Box<Stmt>),
-    Assignment(ExprNode, ExprNode),
+    FlatBlock(Vec<Box<Stmt>>),
+    If(Box<Expr>, Box<Stmt>, Box<Stmt>),
+    While(Box<Expr>, Box<Stmt>),
+    Return(Option<Box<Expr>>),
+    Declaration(Identifier),
+    FunDecl(Identifier, Vec<Identifier>, Box<Stmt>),
+    Assignment(Box<Expr>, Box<Expr>),
 }
 
-/// Expression Abstract Syntax Tree Node
-///
-/// Expressions are a structure of values that can be evaluated by the
-/// interpreter to yield a result.
-///
-/// A few variants are viewed in detail below:
-/// - Identifier: Any token that matches [[:alpha:]]\w*
-/// - Literal: See below
-/// - BinaryOp: A binary operation performed on a lhs and a rhs
-/// - UnaryOp: A unary operation performed on a rhs
-#[derive(Clone)]
-pub struct ExprNode {
-    pub expr: Box<Expr>,
-    pub type_of: Type,
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Expr {
-    Identifier(String),
+    Id(Identifier),
     Literal(Literal),
-    BinaryOp(ExprNode, Opcode, ExprNode),
-    UnaryOp(Opcode, ExprNode),
-    FunCall(String, Vec<ExprNode>),
+    BinaryOp(Box<Expr>, Opcode, Box<Expr>),
+    UnaryOp(Opcode, Box<Expr>),
+    FunCall(String, Vec<Expr>),
 }
 
-/// Literal Values
-///
-/// Literal Enums are values that are known at compile time
-#[derive(Clone)]
+#[derive(Debug, Clone)]
+pub struct Identifier {
+    pub id: String,
+    pub type_of: String,
+}
+
+// TODO: Only need to annotate type if it is an identifier
+impl Identifier {
+    pub fn new(id: String) -> Self {
+        Identifier {
+            id,
+            type_of: "".to_string(),
+        }
+    }
+    pub fn new_typed(id: String, type_of: String) -> Self {
+        Identifier { id, type_of }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Literal {
     Number(i64),
     Boolean(bool),
@@ -51,18 +50,6 @@ pub enum Literal {
     Nil,
 }
 
-/// Basic Types
-#[derive(Clone)]
-pub enum Type {
-    Number,
-    Boolean,
-    String,
-    Nil,
-}
-
-/// Opcodes
-///
-/// Opcodes are fundamental operations on (usually) two operands
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum Opcode {
     // Mathematics
@@ -82,140 +69,4 @@ pub enum Opcode {
     And,
     Or,
     Not,
-}
-
-impl ExprNode {
-    pub fn new_default() -> ExprNode {
-        ExprNode {
-            expr: Box::new(Expr::Literal(Literal::Nil)),
-            type_of: Type::Nil,
-        }
-    }
-
-    pub fn new_untyped(expr: Expr) -> ExprNode {
-        //        let type_of = expr.type_of();
-        let type_of = Type::Nil;
-        ExprNode {
-            expr: Box::new(expr),
-            type_of,
-        }
-    }
-
-    pub fn new_typed(expr: Expr, type_of: Type) -> ExprNode {
-        ExprNode {
-            expr: Box::new(expr),
-            type_of,
-        }
-    }
-
-    pub fn new_nil() -> ExprNode {
-        ExprNode {
-            expr: Box::new(Expr::Literal(Literal::Nil)),
-            type_of: Type::Nil,
-        }
-    }
-
-    pub fn identify(&self) -> String {
-        match &*self.expr {
-            Expr::Identifier(identity) => identity.clone(),
-            _ => "".to_string(),
-        }
-    }
-}
-
-impl fmt::Display for Stmt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Stmt::Block(stmts) => {
-                let stmts: Vec<String> = stmts.iter().map(|stmt| format!("{}", stmt)).collect();
-                let stmts = stmts.join("\n");
-                write!(f, "([{}])", stmts)
-            }
-            Stmt::FlatBlock(stmts) => {
-                let stmts: Vec<String> = stmts.iter().map(|stmt| format!("{}", stmt)).collect();
-                let stmts = stmts.join("\n");
-                write!(f, "([{}])", stmts)
-            }
-            Stmt::Assignment(lhs, rhs) => write!(f, "({} <- {})", lhs, rhs),
-            Stmt::Declaration(identifier) => write!(f, "(define {})", identifier),
-            Stmt::While(condition, block) => write!(f, "(while {} {})", condition, block),
-            Stmt::If(condition, block, alternate) => {
-                write!(f, "(if {} {} {})", condition, block, alternate)
-            }
-            Stmt::Return(returned) => {
-                let returned = returned.clone().unwrap_or(ExprNode::new_default());
-                write!(f, "(return {})", returned)
-            }
-            Stmt::FunDecl(name, params, ret, body) => {
-                let params: Vec<String> = params.iter().map(|p| format!("{}", p)).collect();
-                let params = params.join(", ");
-                write!(f, "(fun {} {}-> {} ({}))", name, params, ret, body)
-            }
-        }
-    }
-}
-
-impl fmt::Display for ExprNode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.expr, self.type_of)
-    }
-}
-
-impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Type::Nil => write!(f, "nil"),
-            Type::Number => write!(f, "num"),
-            Type::Boolean => write!(f, "bool"),
-            Type::String => write!(f, "str"),
-        }
-    }
-}
-
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Expr::Identifier(identity) => write!(f, "{}", identity),
-            Expr::Literal(literal) => write!(f, "{}", literal),
-            Expr::BinaryOp(left, opcode, right) => write!(f, "({} {} {})", opcode, left, right),
-            Expr::UnaryOp(opcode, right) => write!(f, "({} {})", opcode, right),
-            Expr::FunCall(name, args) => {
-                let args: Vec<String> = args.iter().map(|stmt| format!("{}", stmt)).collect();
-                let args = args.join(", ");
-                write!(f, "({}, {})", name, args)
-            }
-        }
-    }
-}
-
-impl fmt::Display for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Literal::Number(number) => write!(f, "{}", number),
-            Literal::Boolean(boolean) => write!(f, "{}", boolean),
-            Literal::String(string) => write!(f, "{}", string),
-            Literal::Nil => write!(f, "Nil"),
-        }
-    }
-}
-
-impl fmt::Display for Opcode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Opcode::Add => write!(f, "+"),
-            Opcode::Sub => write!(f, "-"),
-            Opcode::Mul => write!(f, "*"),
-            Opcode::Div => write!(f, "/"),
-            Opcode::Mod => write!(f, "%"),
-            Opcode::Greater => write!(f, ">"),
-            Opcode::GreaterEqual => write!(f, ">="),
-            Opcode::Lesser => write!(f, "<"),
-            Opcode::LesserEqual => write!(f, "<="),
-            Opcode::EqualEqual => write!(f, "=="),
-            Opcode::BangEqual => write!(f, "!="),
-            Opcode::And => write!(f, "and"),
-            Opcode::Or => write!(f, "or"),
-            Opcode::Not => write!(f, "not"),
-        }
-    }
 }

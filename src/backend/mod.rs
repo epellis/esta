@@ -2,7 +2,8 @@ mod allocation;
 mod assembly_context;
 
 use self::assembly_context::AsmCtx;
-use crate::frontend::ast::{Expr, ExprNode, Literal, Opcode, Stmt, Type};
+//use crate::frontend::ast::{Expr, Box<Expr>, Literal, Opcode, Stmt, Type};
+use crate::frontend::ast::*;
 use crate::util::bool_to_i64;
 use crate::vm::bytecode::*;
 use std::collections::HashMap;
@@ -27,18 +28,18 @@ fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
         Stmt::While(test, body) => make_while(ctx, test, body),
         Stmt::Return(value) => make_return(ctx, value),
         Stmt::Declaration(id) => make_declaration(ctx, id),
-        Stmt::FunDecl(id, args, ret, body) => make_fun(ctx, id, args, ret, body),
+        Stmt::FunDecl(id, args, body) => make_fun(ctx, id, &args, body),
         Stmt::Assignment(lhs, rhs) => make_assignment(ctx, lhs, rhs),
     }
 }
 
-fn dispatch_expr(ctx: &mut AsmCtx, e: &ExprNode, l_value: bool) -> DispatchRet {
-    match &*e.expr {
-        Expr::Identifier(id) => make_identifier(ctx, id, l_value),
-        Expr::Literal(lit) => make_literal(ctx, lit),
-        Expr::BinaryOp(lhs, op, rhs) => make_binary(ctx, lhs, op, rhs),
-        Expr::UnaryOp(op, rhs) => make_unary(ctx, op, rhs),
-        Expr::FunCall(id, args) => make_funcall(ctx, id, args),
+fn dispatch_expr(ctx: &mut AsmCtx, e: &Expr, l_value: bool) -> DispatchRet {
+    match e {
+        Expr::Id(id) => make_identifier(ctx, id, l_value),
+        Expr::Literal(lit) => make_literal(ctx, &lit),
+        Expr::BinaryOp(lhs, op, rhs) => make_binary(ctx, &lhs, &op, &rhs),
+        Expr::UnaryOp(op, rhs) => make_unary(ctx, &op, rhs),
+        Expr::FunCall(id, args) => make_funcall(ctx, &id, &args),
     }
 }
 
@@ -60,7 +61,7 @@ fn make_flat_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
     Ok(insts)
 }
 
-fn make_if(ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>, alter: &Box<Stmt>) -> DispatchRet {
+fn make_if(ctx: &mut AsmCtx, test: &Box<Expr>, body: &Box<Stmt>, alter: &Box<Stmt>) -> DispatchRet {
     let alter_lbl = ctx.next_label();
     let cont_lbl = ctx.next_label();
 
@@ -85,7 +86,7 @@ fn make_if(ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>, alter: &Box<Stmt
     Ok(insts)
 }
 
-fn make_while(ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> DispatchRet {
+fn make_while(ctx: &mut AsmCtx, test: &Box<Expr>, body: &Box<Stmt>) -> DispatchRet {
     let test_lbl = ctx.next_label();
     let cont_lbl = ctx.next_label();
 
@@ -108,7 +109,7 @@ fn make_while(ctx: &mut AsmCtx, test: &ExprNode, body: &Box<Stmt>) -> DispatchRe
     Ok(insts)
 }
 
-fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
+fn make_return(ctx: &mut AsmCtx, value: &Option<Box<Expr>>) -> DispatchRet {
     let mut insts = Vec::new();
     match value {
         Some(rhs) => {
@@ -129,32 +130,30 @@ fn make_return(ctx: &mut AsmCtx, value: &Option<ExprNode>) -> DispatchRet {
     Ok(insts)
 }
 
-fn make_declaration(ctx: &mut AsmCtx, id: &String) -> DispatchRet {
-    ctx.define(id);
+fn make_declaration(ctx: &mut AsmCtx, id: &Identifier) -> DispatchRet {
+    // TODO: Make this better
+    ctx.define(&id.id);
     Ok(Vec::new())
 }
 
 fn make_fun(
     ctx: &mut AsmCtx,
-    id: &String,
-    args: &Vec<ExprNode>,
-    ret: &Type,
+    id: &Identifier,
+    args: &Vec<Identifier>,
     body: &Box<Stmt>,
 ) -> DispatchRet {
-    ctx.add_fun(id);
+    ctx.add_fun(&id.id);
     ctx.args = args.len();
     let mut insts = Vec::new();
-    insts.push(MetaAsm::Lbl(id.clone()));
+    insts.push(MetaAsm::Lbl(id.id.clone()));
 
-    for var in args {
-        if let Expr::Identifier(id) = &*var.expr {
-            ctx.define_arg(&id);
-        }
+    for id in args {
+        ctx.define_arg(&id.id);
     }
 
     insts.push(MetaAsm::Inst(MetaInst::new_local_alloc(
         ByteCode::ALLOC,
-        id.clone(),
+        id.id.clone(),
     )));
 
     insts.extend(dispatch_stmt(ctx, body)?);
@@ -164,7 +163,7 @@ fn make_fun(
     Ok(insts)
 }
 
-fn make_assignment(ctx: &mut AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> DispatchRet {
+fn make_assignment(ctx: &mut AsmCtx, lhs: &Box<Expr>, rhs: &Box<Expr>) -> DispatchRet {
     let rhs = dispatch_expr(ctx, rhs, false)?;
     let lhs = dispatch_expr(ctx, lhs, true)?;
 
@@ -177,9 +176,9 @@ fn make_assignment(ctx: &mut AsmCtx, lhs: &ExprNode, rhs: &ExprNode) -> Dispatch
     Ok(insts)
 }
 
-fn make_identifier(ctx: &mut AsmCtx, id: &String, l_value: bool) -> DispatchRet {
+fn make_identifier(ctx: &mut AsmCtx, id: &Identifier, l_value: bool) -> DispatchRet {
     let mut insts = Vec::new();
-    let offset = ctx.get(id)? as i64;
+    let offset = ctx.get(&id.id)? as i64;
     insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, offset)));
     if !l_value {
         insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
@@ -199,7 +198,7 @@ fn make_literal(_ctx: &mut AsmCtx, lit: &Literal) -> DispatchRet {
     Ok(insts)
 }
 
-fn make_binary(ctx: &mut AsmCtx, lhs: &ExprNode, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
+fn make_binary(ctx: &mut AsmCtx, lhs: &Box<Expr>, op: &Opcode, rhs: &Box<Expr>) -> DispatchRet {
     let lhs = dispatch_expr(ctx, lhs, false)?;
     let rhs = dispatch_expr(ctx, rhs, false)?;
     let op: ByteCode = BIN_OP_TO_BYTE.get(op).unwrap().clone();
@@ -210,7 +209,7 @@ fn make_binary(ctx: &mut AsmCtx, lhs: &ExprNode, op: &Opcode, rhs: &ExprNode) ->
     Ok(insts)
 }
 
-fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
+fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &Box<Expr>) -> DispatchRet {
     let rhs = dispatch_expr(ctx, rhs, false)?;
     let op: ByteCode = BIN_OP_TO_BYTE.get(op).unwrap().clone();
     let mut insts = Vec::new();
@@ -219,7 +218,7 @@ fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &ExprNode) -> DispatchRet {
     Ok(insts)
 }
 
-fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<ExprNode>) -> DispatchRet {
+fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<Expr>) -> DispatchRet {
     let mut insts = Vec::new();
 
     // Allocate space for the return value

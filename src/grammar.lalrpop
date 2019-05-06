@@ -1,4 +1,4 @@
-use crate::frontend::ast::{Expr, Opcode, Literal, Stmt, ExprNode, Type};
+use crate::frontend::ast::*;
 use std::str::FromStr;
 
 grammar;
@@ -39,103 +39,104 @@ Stmt: Box<Stmt> = {
         let while_block = Stmt::While(test, Box::new(Stmt::Block(while_body)));
         block.push(Box::new(while_block));
         Box::new(Stmt::FlatBlock(block))},
-    "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "->" <ret:Type> "{" <body:Stmts> "}" => {
+//    "fun" <name:IdentifierName> "(" <params:Comma<Identifier>> ")" "->" <ret:IdentifierName> "{" <body:Stmts> "}" => {
+//        Box::new(Stmt::FunDecl(
+//            name,
+//            params,
+//            ret,
+//            Box::new(Stmt::Block(body))))},
+    "fun" <name:IdentifierStruct> "(" <params:Comma<IdentifierStruct>> ")" "{" <body:Stmts> "}" => {
         Box::new(Stmt::FunDecl(
             name,
             params,
-            ret,
-            Box::new(Stmt::Block(body))))},
-    "fun" <name:IdentifierName> "(" <params:Comma<Expr>> ")" "{" <body:Stmts> "}" => {
-        Box::new(Stmt::FunDecl(
-            name,
-            params,
-            Type::Nil,
             Box::new(Stmt::Block(body))))},
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
-    <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(ExprNode::new_nil(), proc)),
+    <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(Box::new(Expr::Literal(Literal::Nil)), proc)),
 };
 
 DeclStmt: Box<Stmt> = {
-    "var" <id:Identifier> "=" <rhs:Expr> => {
+    "var" <id:IdentifierStruct> "=" <rhs:Expr> => {
         let mut block = Vec::new();
-        block.push(Box::new(Stmt::Declaration(id.identify())));
-        let lhs = ExprNode::new_untyped(Expr::Identifier(id.identify()));
+        block.push(Box::new(Stmt::Declaration(id.clone())));
+        let lhs = Box::new(Expr::Id(id));
         block.push(Box::new(Stmt::Assignment(lhs, rhs)));
         Box::new(Stmt::FlatBlock(block))
     },
-    "var" <id:Identifier> => Box::new(Stmt::Declaration(id.identify())),
-}
+    "var" <id:IdentifierStruct> => Box::new(Stmt::Declaration(id)),
+};
 
 AssignStmt: Box<Stmt> = {
     <lhs:Expr> "=" <rhs:Expr> => Box::new(Stmt::Assignment(lhs, rhs)),
 };
 
-// Nonterminal Symbols - Expressions
+/// Nonterminal Symbols - Expressions
 
-Expr: ExprNode = {
+Expr: Box<Expr> = {
     LogicalExpr,
 };
 
-LogicalExpr: ExprNode = {
-    LogicalExpr LogicalOp EqualityExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
+LogicalExpr: Box<Expr> = {
+    LogicalExpr LogicalOp EqualityExpr => Box::new(Expr::BinaryOp(<>)),
     EqualityExpr,
 };
 
-EqualityExpr: ExprNode = {
-    EqualityExpr EqualityOp CompareExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
+EqualityExpr: Box<Expr> = {
+    EqualityExpr EqualityOp CompareExpr => Box::new(Expr::BinaryOp(<>)),
     CompareExpr,
 };
 
-CompareExpr: ExprNode = {
-    CompareExpr CompareOp AddExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
+CompareExpr: Box<Expr> = {
+    CompareExpr CompareOp AddExpr => Box::new(Expr::BinaryOp(<>)),
     AddExpr,
 };
 
-AddExpr: ExprNode = {
-    AddExpr AddOp MultExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
+AddExpr: Box<Expr> = {
+    AddExpr AddOp MultExpr => Box::new(Expr::BinaryOp(<>)),
     MultExpr,
 };
 
-MultExpr: ExprNode = {
-    MultExpr MultOp UnaryExpr => ExprNode::new_untyped(Expr::BinaryOp(<>)),
+MultExpr: Box<Expr> = {
+    MultExpr MultOp UnaryExpr => Box::new(Expr::BinaryOp(<>)),
     UnaryExpr,
 };
 
-UnaryExpr: ExprNode = {
-    UnaryOp UnaryExpr => ExprNode::new_untyped(Expr::UnaryOp(<>)),
+UnaryExpr: Box<Expr> = {
+    UnaryOp UnaryExpr => Box::new(Expr::UnaryOp(<>)),
     FuncHandler
 };
 
-FuncHandler: ExprNode = {
+FuncHandler: Box<Expr> = {
     FuncExpr,
     PrimaryExpr
-}
+};
 
-FuncExpr: ExprNode = {
-    <name:IdentifierName> "(" <params:Comma<Expr>> ")" => ExprNode::new_untyped(Expr::FunCall(name, params)),
-}
+FuncExpr: Box<Expr> = {
+    <name:IdentifierName> "(" <params:Comma<Expr>> ")" => {
+        let params = params.iter().cloned().map(|x| *x).collect();
+        Box::new(Expr::FunCall(name,
+        params))
+    },
+};
 
-PrimaryExpr: ExprNode = {
-    Num => ExprNode::new_typed(Expr::Literal(Literal::Number(<>)), Type::Number),
-    Bool => ExprNode::new_typed(Expr::Literal(Literal::Boolean(<>)), Type::Boolean),
-    String => ExprNode::new_typed(Expr::Literal(Literal::String(<>)), Type::String),
+PrimaryExpr: Box<Expr> = {
+    Num => Box::new(Expr::Literal(Literal::Number(<>))),
+    Bool => Box::new(Expr::Literal(Literal::Boolean(<>))),
+    String => Box::new(Expr::Literal(Literal::String(<>))),
     "(" <Expr> ")",
-    "Nil" => ExprNode::new_untyped(Expr::Literal(Literal::Nil)),
+    "Nil" => Box::new(Expr::Literal(Literal::Nil)),
     Identifier,
 };
 
 // Terminal Symbols
 
-Type: Type = {
-    "nil" => Type::Nil,
-    "num" => Type::Number,
-    "bool" => Type::Boolean,
-    "str" => Type::String,
-}
+Identifier: Box<Expr> = {
+// TODO: Support annotating identifier type
+//    <id:IdentifierName> ":" <t:Type> => Expr::Id(Identifier::new(id)),
+    <id:IdentifierStruct> => Box::new(Expr::Id(id)),
+};
 
-Identifier: ExprNode = {
-    <id:IdentifierName> ":" <t:Type> => ExprNode::new_typed(Expr::Identifier(id), t),
-    <id:IdentifierName> => ExprNode::new_untyped(Expr::Identifier(id)),
+IdentifierStruct: Identifier = {
+    <id:IdentifierName> => Identifier::new(id),
 }
 
 IdentifierName: String = {

@@ -30,15 +30,7 @@ mod tests {
         let result = frontend::run(input);
         assert_eq!(result.is_err(), true);
 
-        let input = "var a: num;";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
-
         let input = "var a = 1;";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
-
-        let input = "var a: num = 1;";
         let result = frontend::run(input);
         assert_eq!(result.is_ok(), true);
     }
@@ -84,29 +76,29 @@ mod tests {
         let result = frontend::run(input);
         assert_eq!(result.is_ok(), true);
 
-        let input = "fun foo(a: num) {}";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
+        //        let input = "fun foo(a: num) {}";
+        //        let result = frontend::run(input);
+        //        assert_eq!(result.is_ok(), true);
 
         let input = "fun foo(a, b) {}";
         let result = frontend::run(input);
         assert_eq!(result.is_ok(), true);
 
-        let input = "fun foo(a: num, b: nil) {}";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
+        //        let input = "fun foo(a: num, b: nil) {}";
+        //        let result = frontend::run(input);
+        //        assert_eq!(result.is_ok(), true);
 
-        let input = "fun foo() -> nil {}";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
+        //        let input = "fun foo() -> nil {}";
+        //        let result = frontend::run(input);
+        //        assert_eq!(result.is_ok(), true);
 
         let input = "fun foo(a) { return a; } ";
         let result = frontend::run(input);
         assert_eq!(result.is_ok(), true);
 
-        let input = "fun foo(a: num, b: nil) -> num { return a * b; }";
-        let result = frontend::run(input);
-        assert_eq!(result.is_ok(), true);
+        //        let input = "fun foo(a: num, b: nil) -> num { return a * b; }";
+        //        let result = frontend::run(input);
+        //        assert_eq!(result.is_ok(), true);
     }
 
     #[test]
