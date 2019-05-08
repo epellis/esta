@@ -25,31 +25,36 @@ Comma<T>: Vec<T> = {
 Stmt: Box<Stmt> = {
     <decl:DeclStmt> ";" => decl,
     <assign:AssignStmt> ";" => assign,
-    "while" <cond:Expr> "{" <stmts:Stmts> "}" => Box::new(Stmt::While(cond, Box::new(Stmt::Block(stmts)))),
+    "while" <cond:Expr> "{" <stmts:Stmts> "}" => Box::new(Stmt::While(cond, Box::new(Stmt::Block(stmts, true)))),
     "if" <cond:Expr> "{" <stmts:Stmts> "}" => {
         Box::new(Stmt::If(cond,
-            Box::new(Stmt::Block(stmts)),
-            Box::new(Stmt::Block(Vec::new()))))},
+            Box::new(Stmt::Block(stmts, true)),
+            Box::new(Stmt::Block(Vec::new(), true))))},
     "for" <init:DeclStmt?> ";" <test:Expr> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         let mut block = Vec::new();
         if init.is_some() { block.push(init.unwrap()); }
         let mut while_body = Vec::new();
         if increment.is_some() { while_body.push(increment.unwrap()); }
         while_body.extend(body);
-        let while_block = Stmt::While(test, Box::new(Stmt::Block(while_body)));
+        let while_block = Stmt::While(test, Box::new(Stmt::Block(while_body, true)));
         block.push(Box::new(while_block));
-        Box::new(Stmt::FlatBlock(block))},
-//    "fun" <name:IdentifierName> "(" <params:Comma<Identifier>> ")" "->" <ret:IdentifierName> "{" <body:Stmts> "}" => {
-//        Box::new(Stmt::FunDecl(
-//            name,
-//            params,
-//            ret,
-//            Box::new(Stmt::Block(body))))},
-    "fun" <name:IdentifierStruct> "(" <params:Comma<IdentifierStruct>> ")" "{" <body:Stmts> "}" => {
+        Box::new(Stmt::Block(block, false))},
+    "fun" <name:IdentifierName> "(" <params:Comma<IdentifierStruct>> ")" "->" <ret:IdentifierName> "{" <body:Stmts> "}" => {
         Box::new(Stmt::FunDecl(
-            name,
+            Identifier::new_typed(name, ret),
             params,
-            Box::new(Stmt::Block(body))))},
+            Box::new(Stmt::Block(body, true))))},
+    "fun" <name:IdentifierName> "(" <params:Comma<IdentifierStruct>> ")" "{" <body:Stmts> "}" => {
+        Box::new(Stmt::FunDecl(
+            Identifier::new(name),
+            params,
+            Box::new(Stmt::Block(body, true))))},
+    "struct" <id:IdentifierName> "{" <fields:Comma<IdentifierStruct>> "}" => {
+        Box::new(Stmt::Struct(
+            id,
+            fields,
+        ))
+    },
     "return" <value:Expr?> ";" => Box::new(Stmt::Return(value)),
     <proc:FuncExpr> ";" => Box::new(Stmt::Assignment(Box::new(Expr::Literal(Literal::Nil)), proc)),
 };
@@ -60,7 +65,7 @@ DeclStmt: Box<Stmt> = {
         block.push(Box::new(Stmt::Declaration(id.clone())));
         let lhs = Box::new(Expr::Id(id));
         block.push(Box::new(Stmt::Assignment(lhs, rhs)));
-        Box::new(Stmt::FlatBlock(block))
+        Box::new(Stmt::Block(block, false))
     },
     "var" <id:IdentifierStruct> => Box::new(Stmt::Declaration(id)),
 };
@@ -130,12 +135,11 @@ PrimaryExpr: Box<Expr> = {
 // Terminal Symbols
 
 Identifier: Box<Expr> = {
-// TODO: Support annotating identifier type
-//    <id:IdentifierName> ":" <t:Type> => Expr::Id(Identifier::new(id)),
     <id:IdentifierStruct> => Box::new(Expr::Id(id)),
 };
 
 IdentifierStruct: Identifier = {
+    <id:IdentifierName> ":" <t:IdentifierName> => Identifier::new_typed(id, t),
     <id:IdentifierName> => Identifier::new(id),
 }
 
@@ -188,4 +192,3 @@ UnaryOp: Opcode = {
     "not" => Opcode::Not,
     "-" => Opcode::Sub,
 };
-

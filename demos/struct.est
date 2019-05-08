@@ -1,0 +1,14 @@
+struct Name {
+    first: string,
+    last: string,
+}
+
+struct Record {
+    id: number,
+    name: Name,
+}
+
+fun main() {
+    var a = 1;
+    return a;
+}

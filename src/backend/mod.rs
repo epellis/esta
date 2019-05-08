@@ -2,7 +2,6 @@ mod allocation;
 mod assembly_context;
 
 use self::assembly_context::AsmCtx;
-//use crate::frontend::ast::{Expr, Box<Expr>, Literal, Opcode, Stmt, Type};
 use crate::frontend::ast::*;
 use crate::util::bool_to_i64;
 use crate::vm::bytecode::*;
@@ -22,14 +21,14 @@ pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
 //  by the type that inherits this trait
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
     match s {
-        Stmt::Block(body) => make_block(ctx, body),
-        Stmt::FlatBlock(body) => make_flat_block(ctx, body),
+        Stmt::Block(body, is_scope) => make_block(ctx, body, is_scope),
         Stmt::If(test, body, alter) => make_if(ctx, test, body, alter),
         Stmt::While(test, body) => make_while(ctx, test, body),
         Stmt::Return(value) => make_return(ctx, value),
         Stmt::Declaration(id) => make_declaration(ctx, id),
         Stmt::FunDecl(id, args, body) => make_fun(ctx, id, &args, body),
         Stmt::Assignment(lhs, rhs) => make_assignment(ctx, lhs, rhs),
+        Stmt::Struct(id, fields) => make_struct(ctx, id, fields),
     }
 }
 
@@ -43,20 +42,16 @@ fn dispatch_expr(ctx: &mut AsmCtx, e: &Expr, l_value: bool) -> DispatchRet {
     }
 }
 
-fn make_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
-    ctx.push_scope();
+fn make_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>, is_scope: &bool) -> DispatchRet {
+    if *is_scope {
+        ctx.push_scope();
+    }
     let mut insts = Vec::new();
     for b in body {
         insts.extend(dispatch_stmt(ctx, b)?);
     }
-    ctx.pop_scope();
-    Ok(insts)
-}
-
-fn make_flat_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>) -> DispatchRet {
-    let mut insts = Vec::new();
-    for b in body {
-        insts.extend(dispatch_stmt(ctx, b)?);
+    if *is_scope {
+        ctx.pop_scope();
     }
     Ok(insts)
 }
@@ -176,6 +171,10 @@ fn make_assignment(ctx: &mut AsmCtx, lhs: &Box<Expr>, rhs: &Box<Expr>) -> Dispat
     Ok(insts)
 }
 
+fn make_struct(ctx: &mut AsmCtx, id: &String, fields: &Vec<Identifier>) -> DispatchRet {
+    Ok(Vec::new())
+}
+
 fn make_identifier(ctx: &mut AsmCtx, id: &Identifier, l_value: bool) -> DispatchRet {
     let mut insts = Vec::new();
     let offset = ctx.get(&id.id)? as i64;
@@ -263,7 +262,6 @@ fn bootstrap_startup(insts: Vec<MetaAsm>) -> Vec<MetaAsm> {
 
 fn assemble(insts: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
     let mut labels = HashMap::new();
-    //    let mut new_insts = Vec::new();
     let insts = insts.iter().fold(Vec::new(), |mut v, i| match i {
         MetaAsm::Inst(i) => {
             v.push(i);

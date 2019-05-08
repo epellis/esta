@@ -1,5 +1,5 @@
 fun main() {
-    var n = fib(30);
+    var n = fib(5);
     return n;
 }
 

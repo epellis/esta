@@ -17,6 +17,7 @@ fn main() {
         2 => run_file(&args[1]),
         _ => eprintln!("Usage: esta [source]"),
     }
+    process::exit(1);
 }
 
 fn run_prompt() {

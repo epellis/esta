@@ -4,14 +4,14 @@
 /// ...
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Block(Vec<Box<Stmt>>),
-    FlatBlock(Vec<Box<Stmt>>),
+    Block(Vec<Box<Stmt>>, bool),
     If(Box<Expr>, Box<Stmt>, Box<Stmt>),
     While(Box<Expr>, Box<Stmt>),
     Return(Option<Box<Expr>>),
     Declaration(Identifier),
     FunDecl(Identifier, Vec<Identifier>, Box<Stmt>),
     Assignment(Box<Expr>, Box<Expr>),
+    Struct(String, Vec<Identifier>),
 }
 
 #[derive(Debug, Clone)]
@@ -29,12 +29,11 @@ pub struct Identifier {
     pub type_of: String,
 }
 
-// TODO: Only need to annotate type if it is an identifier
 impl Identifier {
     pub fn new(id: String) -> Self {
         Identifier {
             id,
-            type_of: "".to_string(),
+            type_of: "Dynamic".to_string(),
         }
     }
     pub fn new_typed(id: String, type_of: String) -> Self {
