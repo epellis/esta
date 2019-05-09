@@ -1,4 +1,6 @@
 use super::allocation::Alloc;
+use crate::frontend::ast::EstaStruct;
+use crate::middleend::MetaData;
 use crate::util::stack::Stack;
 use std::collections::HashMap;
 
@@ -9,16 +11,18 @@ pub struct AsmCtx {
     pub locals: HashMap<String, usize>,    // Tracks all local variables allocated within a function
     pub args: usize,                       // Count number of args for current function
     suffix: usize,                         // Keeps a unique suffix for each label
+    md: MetaData,                          // Keep track of declared functions and structs
 }
 
 impl AsmCtx {
-    pub fn new() -> AsmCtx {
+    pub fn new(md: MetaData) -> AsmCtx {
         AsmCtx {
             base: "GLOBAL".to_string(),
             scopes: HashMap::new(),
             locals: HashMap::new(),
             suffix: 0,
             args: 0,
+            md,
         }
     }
     pub fn next_label(&mut self) -> String {
@@ -64,5 +68,15 @@ impl AsmCtx {
             }
         }
         Err("Couldn't find id")
+    }
+    pub fn get_esta_struct(&self, id: &str) -> Option<EstaStruct> {
+        //        debug!("Looking for: {}", id);
+        //        debug!("Options: {:?}", &self.md.structs);
+        for s in &self.md.structs {
+            if s.id == id {
+                return Some(s.clone());
+            }
+        }
+        None
     }
 }

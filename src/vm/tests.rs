@@ -2,6 +2,9 @@ use crate::vm::bytecode::*;
 use crate::vm::serialize::*;
 use crate::vm::*;
 
+// TODO: Calling a function in a for loop has strange effects
+// TODO: Calling a function in a while loop has strange effects
+
 #[test]
 fn test_convert_raw() {
     let raw = "ALLOC 1

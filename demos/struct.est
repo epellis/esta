@@ -4,7 +4,7 @@ struct Vector {
 }
 
 fun main() {
-    var t = Vector;
+    var t = Vector();
     t.x = 0;
     t.y = 1;
     return t.x + t.y;

@@ -4,6 +4,9 @@ pub mod middleend;
 pub mod util;
 pub mod vm;
 
+#[cfg(test)]
+mod integration_tests;
+
 #[macro_use]
 extern crate lalrpop_util;
 

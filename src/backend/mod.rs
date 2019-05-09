@@ -11,15 +11,13 @@ use std::collections::HashMap;
 type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
 pub fn generate(stmts: Stmt, md: MetaData) -> Result<Vec<Inst>, &'static str> {
-    let mut ctx = AsmCtx::new();
+    let mut ctx = AsmCtx::new(md);
     let insts = dispatch_stmt(&mut ctx, &stmts)?;
     let insts = bootstrap_startup(insts);
     let insts = assemble(insts, ctx);
     Ok(insts)
 }
 
-// TODO: If we want to refactor into a Trait, each make_* is a necessary defined function implemented
-//  by the type that inherits this trait
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
     match s {
         Stmt::Block(body, is_scope) => make_block(ctx, body, is_scope),
@@ -141,7 +139,7 @@ fn make_fun(
     body: &Box<Stmt>,
 ) -> DispatchRet {
     ctx.add_fun(&id.id);
-    ctx.args = args.len();
+    ctx.args = args.len(); // TODO: Do we need this?
     let mut insts = Vec::new();
     insts.push(MetaAsm::Lbl(id.id.clone()));
 
@@ -174,12 +172,64 @@ fn make_assignment(ctx: &mut AsmCtx, lhs: &Box<Expr>, rhs: &Box<Expr>) -> Dispat
     Ok(insts)
 }
 
+// Create a new constructor function for this struct which will allocate space
+// on the heap with the right tags and return the address to the caller
 fn make_struct(ctx: &mut AsmCtx, id: &String, fields: &Vec<Identifier>) -> DispatchRet {
-    Ok(Vec::new())
+    ctx.add_fun(id);
+    let mut insts = Vec::new();
+
+    let esta_struct = ctx.get_esta_struct(id).unwrap();
+    insts.push(MetaAsm::Lbl(id.clone()));
+
+    // Alloc new space on the heap to store the struct
+    insts.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::LOADC,
+        esta_struct.size as i64,
+    )));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::NEW)));
+
+    // Set the first space to the struct's tag
+    insts.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::LOADC,
+        esta_struct.tag as i64,
+    )));
+    insts.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::LOADRC,
+        0 as i64,
+    )));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
+    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 0 as i64)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::ADD)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STOREH)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::POP)));
+
+    // Set the second space to the struct's size
+    insts.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::LOADC,
+        esta_struct.size as i64,
+    )));
+    insts.push(MetaAsm::Inst(MetaInst::new_data(
+        ByteCode::LOADRC,
+        0 as i64,
+    )));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
+    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADC, 1 as i64)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::ADD)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STOREH)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::POP)));
+
+    // Return the starting address of the struct
+    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, -3)));
+    insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::STORE)));
+    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::RET, 2)));
+
+    ctx.pop_fun();
+    Ok(insts)
 }
 
 fn make_identifier(ctx: &mut AsmCtx, id: &Identifier, l_value: bool) -> DispatchRet {
     let mut insts = Vec::new();
+    debug!("Making: {}", &id.id);
     let offset = ctx.get(&id.id)? as i64;
     insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, offset)));
     if !l_value {
@@ -287,10 +337,14 @@ fn assemble(insts: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
         .iter()
         .map(|i| match i.var.clone() {
             MetaVar::Data(d) => Inst::new_data(i.inst.clone(), d),
-            MetaVar::Label(l) => Inst::new_data(i.inst.clone(), *labels.get(&l).unwrap() as i64),
-            MetaVar::LocalAlloc(id) => {
-                Inst::new_data(i.inst.clone(), *ctx.locals.get(&id).unwrap() as i64)
-            }
+            MetaVar::Label(l) => Inst::new_data(
+                i.inst.clone(),
+                *labels.get(&l).expect("Couldn't find label") as i64,
+            ),
+            MetaVar::LocalAlloc(id) => Inst::new_data(
+                i.inst.clone(),
+                *ctx.locals.get(&id).expect("Couldn't find local") as i64,
+            ),
             MetaVar::None => Inst::new_inst(i.inst.clone()),
         })
         .collect()

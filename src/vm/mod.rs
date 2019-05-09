@@ -36,6 +36,7 @@ impl VirtualMachine {
     pub fn run(&mut self) -> Result<(), &'static str> {
         while let StepCode::CONTINUE = self.step()? {
             debug!("{}", self.info());
+            debug!("{:?}", self.heap);
         }
         Ok(())
     }

@@ -2,7 +2,6 @@
 
 [![CircleCI](https://circleci.com/gh/epellis/esta.svg?style=shield)](https://circleci.com/gh/epellis/esta)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/epellis/esta.svg?style=popout-square)
-[![Num LoC](https://tokei.rs/b1/github/epellis/esta)](https://github.com/epellis/esta)
 
 
 Esta is a gradually typed, interpreted language and virtual machine implementation of my own design written in Rust
@@ -33,6 +32,9 @@ fun multiply(a, b) {
 
 print(multiply(3, 4) == 12);
 ```
+
+## Blog Posts
+- [Writing and traversing an AST in Rust](http://nedellis.com/2019/05/08/esta_1/)
 
 ## Development
 
