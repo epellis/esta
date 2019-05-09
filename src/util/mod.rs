@@ -1,4 +1,5 @@
 pub mod stack;
+pub mod fold;
 
 pub fn bool_to_i64(cond: bool) -> i64 {
     if cond {

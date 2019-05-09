@@ -1,14 +1,12 @@
-struct Name {
-    first: string,
-    last: string,
-}
-
-struct Record {
-    id: number,
-    name: Name,
+struct Vector {
+    x,
+    y,
 }
 
 fun main() {
-    var a = 1;
-    return a;
+    var t = Vector;
+    t.x = 0;
+    t.y = 1;
+    return t.x + t.y;
 }
+

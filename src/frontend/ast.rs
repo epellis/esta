@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 /// Statement AST
 ///     Block: Scoped Block
 ///     FlatBlock: Unscoped Block
@@ -17,7 +19,9 @@ pub enum Stmt {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Id(Identifier),
+    Dot(Identifier, Box<Expr>),
     Literal(Literal),
+    List(Vec<Box<Expr>>),
     BinaryOp(Box<Expr>, Opcode, Box<Expr>),
     UnaryOp(Opcode, Box<Expr>),
     FunCall(String, Vec<Expr>),
@@ -47,6 +51,36 @@ pub enum Literal {
     Boolean(bool),
     String(String),
     Nil,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct EstaStruct {
+    pub id: String,
+    pub tag: usize,                     // Unique identifier
+    pub size: usize,                    // Size of the entire struct
+    pub fields: HashMap<String, usize>, // Offset of each field.
+}
+
+impl EstaStruct {
+    pub fn new(s: Stmt) -> EstaStruct {
+        if let Stmt::Struct(id, fields_list) = s {
+            let tag = 0;
+            let size = 2 + fields_list.len();
+            //            let fields = HashMap::new();
+            let mut fields = HashMap::new();
+            for (i, field) in fields_list.iter().enumerate() {
+                fields.insert(field.id.clone(), i + 2);
+            }
+            EstaStruct {
+                id,
+                tag,
+                size,
+                fields,
+            }
+        } else {
+            Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]

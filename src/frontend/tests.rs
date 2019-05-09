@@ -99,6 +99,14 @@ fn test_control() {
     let input = "if False { } ";
     let result = frontend::run(input);
     assert_eq!(result.is_ok(), true);
+
+    let input = "if False { } else { }";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+
+    let input = "if False { } else { if True { } }";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
 }
 
 #[test]
@@ -112,6 +120,32 @@ fn test_struct() {
     assert_eq!(result.is_ok(), true);
 
     let input = "struct Foo { a: num, b }";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+}
+
+#[test]
+fn test_list() {
+    let input = "var xs = [];";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+
+    let input = "var xs = [1];";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+
+    let input = "var xs = [1, 2, 3];";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+}
+
+#[test]
+fn test_dot() {
+    let input = "var a; var b = a.b;";
+    let result = frontend::run(input);
+    assert_eq!(result.is_ok(), true);
+
+    let input = "var a; var b = a.b();";
     let result = frontend::run(input);
     assert_eq!(result.is_ok(), true);
 }

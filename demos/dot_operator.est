@@ -1,0 +1,6 @@
+fun main() {
+    var a = [1, 2, 3];
+    var b = a.at(0);
+    var c = a.len;
+    return b;
+}

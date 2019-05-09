@@ -50,9 +50,9 @@ impl VirtualMachine {
                 let addr: usize = self.pop()? as usize;
                 self.push(self.stack[addr]);
             }
-            ByteCode::LOADA => {
-                let addr: usize = ir.data.unwrap() as usize;
-                self.push(self.stack[addr]);
+            ByteCode::LOADH => {
+                let addr: usize = self.pop()? as usize;
+                self.push(self.heap[addr]);
             }
             ByteCode::LOADRC => {
                 let val = ir.data.unwrap() + self.fp as i64;
@@ -65,6 +65,11 @@ impl VirtualMachine {
                     self.stack.resize(addr + 1, 0);
                 }
                 self.stack[addr] = *self.top()?;
+            }
+            ByteCode::STOREH => {
+                let addr: usize = self.pop()? as usize;
+
+                self.heap[addr] = *self.top()?;
             }
             ByteCode::POP => {
                 self.pop()?;

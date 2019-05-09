@@ -3,13 +3,14 @@ mod assembly_context;
 
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::*;
+use crate::middleend::MetaData;
 use crate::util::bool_to_i64;
 use crate::vm::bytecode::*;
 use std::collections::HashMap;
 
 type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
-pub fn generate(stmts: Stmt) -> Result<Vec<Inst>, &'static str> {
+pub fn generate(stmts: Stmt, md: MetaData) -> Result<Vec<Inst>, &'static str> {
     let mut ctx = AsmCtx::new();
     let insts = dispatch_stmt(&mut ctx, &stmts)?;
     let insts = bootstrap_startup(insts);
@@ -39,6 +40,8 @@ fn dispatch_expr(ctx: &mut AsmCtx, e: &Expr, l_value: bool) -> DispatchRet {
         Expr::BinaryOp(lhs, op, rhs) => make_binary(ctx, &lhs, &op, &rhs),
         Expr::UnaryOp(op, rhs) => make_unary(ctx, &op, rhs),
         Expr::FunCall(id, args) => make_funcall(ctx, &id, &args),
+        Expr::List(xs) => make_list(ctx, &xs),
+        Expr::Dot(this, action) => make_dot(ctx, &this, &action),
     }
 }
 
@@ -246,6 +249,14 @@ fn make_funcall(ctx: &mut AsmCtx, id: &String, args: &Vec<Expr>) -> DispatchRet 
     )));
 
     Ok(insts)
+}
+
+fn make_list(ctx: &mut AsmCtx, xs: &Vec<Box<Expr>>) -> DispatchRet {
+    Ok(Vec::new())
+}
+
+fn make_dot(ctx: &mut AsmCtx, this: &Identifier, action: &Box<Expr>) -> DispatchRet {
+    Ok(Vec::new())
 }
 
 fn bootstrap_startup(insts: Vec<MetaAsm>) -> Vec<MetaAsm> {

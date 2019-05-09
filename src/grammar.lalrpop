@@ -30,6 +30,10 @@ Stmt: Box<Stmt> = {
         Box::new(Stmt::If(cond,
             Box::new(Stmt::Block(stmts, true)),
             Box::new(Stmt::Block(Vec::new(), true))))},
+    "if" <cond:Expr> "{" <stmts:Stmts> "}" "else" "{" <alter:Stmts> "}" => {
+        Box::new(Stmt::If(cond,
+            Box::new(Stmt::Block(stmts, true)),
+            Box::new(Stmt::Block(alter, true)))) },
     "for" <init:DeclStmt?> ";" <test:Expr> ";" <increment:AssignStmt?> ";" "{" <body:Stmts> "}" => {
         let mut block = Vec::new();
         if init.is_some() { block.push(init.unwrap()); }
@@ -77,8 +81,13 @@ AssignStmt: Box<Stmt> = {
 /// Nonterminal Symbols - Expressions
 
 Expr: Box<Expr> = {
-    LogicalExpr,
+    List,
 };
+
+List: Box<Expr> = {
+    "[" <xs:Comma<Expr>> "]" => Box::new(Expr::List(xs)),
+    LogicalExpr,
+}
 
 LogicalExpr: Box<Expr> = {
     LogicalExpr LogicalOp EqualityExpr => Box::new(Expr::BinaryOp(<>)),
@@ -112,7 +121,7 @@ UnaryExpr: Box<Expr> = {
 
 FuncHandler: Box<Expr> = {
     FuncExpr,
-    PrimaryExpr
+    DotExpr
 };
 
 FuncExpr: Box<Expr> = {
@@ -122,6 +131,19 @@ FuncExpr: Box<Expr> = {
         params))
     },
 };
+
+DotExpr: Box<Expr> = {
+    <id:IdentifierName> "." <e:FuncExpr> => {
+        let id = Identifier::new(id);
+        Box::new(Expr::Dot(id, e))
+    },
+    <id:IdentifierName> "." <a:IdentifierName> => {
+        let id = Identifier::new(id);
+        let a = Box::new(Expr::Id(Identifier::new(a)));
+        Box::new(Expr::Dot(id, a))
+    },
+    PrimaryExpr,
+}
 
 PrimaryExpr: Box<Expr> = {
     Num => Box::new(Expr::Literal(Literal::Number(<>))),

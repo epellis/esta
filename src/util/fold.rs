@@ -103,6 +103,15 @@ pub trait Fold {
         Self::reduce(children)
     }
 
+    fn fold_list(down: &Self::DownT, xs: &Vec<Box<Expr>>) -> Option<Self::UpT> {
+        let children = xs.iter().map(|e| Self::fold_expr(down, e)).collect();
+        Self::reduce(children)
+    }
+
+    fn fold_dot(down: &Self::DownT, this: &Identifier, action: &Box<Expr>) -> Option<Self::UpT> {
+        Self::fold_expr(down, action)
+    }
+
     fn fold_stmt(down: &Self::DownT, s: &Stmt) -> Option<Self::UpT> {
         match s {
             Stmt::Block(body, is_scope) => Self::fold_block(down, body, is_scope),
@@ -115,6 +124,7 @@ pub trait Fold {
             Stmt::Struct(id, fields) => Self::fold_struct(down, id, fields),
         }
     }
+
     fn fold_expr(down: &Self::DownT, e: &Expr) -> Option<Self::UpT> {
         match e {
             Expr::Id(id) => Self::fold_id(down, id),
@@ -122,6 +132,8 @@ pub trait Fold {
             Expr::BinaryOp(lhs, op, rhs) => Self::fold_binary(down, lhs, op, rhs),
             Expr::UnaryOp(op, rhs) => Self::fold_unary(down, op, rhs),
             Expr::FunCall(id, args) => Self::fold_funcall(down, id, args),
+            Expr::List(xs) => Self::fold_list(down, xs),
+            Expr::Dot(this, action) => Self::fold_dot(down, this, action),
         }
     }
 }

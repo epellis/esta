@@ -8,7 +8,6 @@ use strum::IntoEnumIterator;
 pub enum ByteCode {
     LOADC,  // Push a value to the stack
     LOAD,   // Push a value at address specified in top of address to stack
-    LOADA,  // LOADC followed by LOAD. For variable addresses
     LOADRC, // Push data plus the current frame pointer to the stack
     STORE,  // Overwrite a value at address specified in top of stack
     POP,    // Pop the top element off the stack
@@ -19,6 +18,8 @@ pub enum ByteCode {
     SLIDE,  // Move the return value from the top of stack to top of FP
     RET,    // Return control to the caller
     NEW,    // Allocate space on the heap for an object the size of top of stack
+    LOADH,  // Push data from the heap to the top of stack
+    STOREH, // Pop the top of stack and store it on the heap. Like STORE
     JUMP,   // Change the PC to a new value
     JUMPZ,  // Change the PC to a new value if the top of stack is zero
     HALT,   // Stop the VM from executing

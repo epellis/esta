@@ -376,3 +376,36 @@ fn test_not() {
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
+
+#[test]
+fn test_loadh() {
+    let instructions: Vec<Inst> = vec![
+        Inst::new_data(ByteCode::LOADC, 0),
+        Inst::new_inst(ByteCode::LOADH),
+        Inst::new_data(ByteCode::LOADC, 1),
+        Inst::new_inst(ByteCode::LOADH),
+        Inst::new_inst(ByteCode::HALT),
+    ];
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    vm.heap = vec![5, 6];
+    assert_eq!(vm.run().is_ok(), true);
+    assert_eq!(&[5, 6].to_vec(), &vm.stack);
+}
+
+#[test]
+fn test_storeh() {
+    let instructions: Vec<Inst> = vec![
+        Inst::new_data(ByteCode::LOADC, 5),
+        Inst::new_data(ByteCode::LOADC, 0),
+        Inst::new_inst(ByteCode::STOREH),
+        Inst::new_inst(ByteCode::POP),
+        Inst::new_data(ByteCode::LOADC, 6),
+        Inst::new_data(ByteCode::LOADC, 1),
+        Inst::new_inst(ByteCode::STOREH),
+        Inst::new_inst(ByteCode::HALT),
+    ];
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    vm.heap = vec![0, 0];
+    assert_eq!(vm.run().is_ok(), true);
+    assert_eq!(&[5, 6].to_vec(), &vm.heap);
+}

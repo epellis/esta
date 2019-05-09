@@ -19,10 +19,9 @@ extern crate log;
 extern crate env_logger;
 
 pub fn run(input: &str) -> Result<(), &'static str> {
-    debug!("Hello World");
-
     let stmts = frontend::run(input)?;
-    let inst = backend::generate(stmts)?;
+    let (stmts, md) = middleend::run(stmts)?;
+    let inst = backend::generate(stmts, md)?;
     for (j, i) in inst.iter().enumerate() {
         debug!("{: >3} {}", j, i);
     }

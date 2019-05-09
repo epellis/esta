@@ -29,6 +29,10 @@ fn run_prompt() {
             .read_line(&mut buffer)
             .expect("Couldn't read input");
 
+        // TODO: This is just a temporary workaround until we can execute expressions
+        //  separately
+        buffer = format!("fun main() {{ {} }}", buffer);
+
         match esta::run(&buffer) {
             Ok(()) => {}
             Err(why) => eprintln!("{}", why),
