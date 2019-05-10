@@ -18,16 +18,18 @@ pub struct VirtualMachine {
     stack: Vec<i64>,
     heap: Vec<i64>,
     inst: Vec<Inst>,
+    data: Vec<u64>,
     pc: usize,
     fp: usize,
 }
 
 impl VirtualMachine {
-    pub fn new(inst: Vec<Inst>) -> VirtualMachine {
+    pub fn new(inst: Vec<Inst>, data: Vec<u64>) -> VirtualMachine {
         VirtualMachine {
             stack: Vec::new(),
             heap: Vec::new(),
             inst,
+            data,
             pc: 0,
             fp: 1,
         }
@@ -138,7 +140,6 @@ impl VirtualMachine {
                 }
             }
             ByteCode::HALT => {
-                println!("Exited Successfully");
                 return Ok(StepCode::HALT);
             }
             ByteCode::ADD => {

@@ -1,0 +1,21 @@
+fun main() {
+    var a = 7;
+    var b = 2;
+    for var i = 0; i < 20; i = i + 1; {
+        if a % 2 == 0 {
+            a = 1;
+        }
+        a = add(a, b);
+        b = add(b, b);
+    }
+}
+
+fun add(a, b) {
+    a = identity(a);
+    b = identity(b);
+    return a + b;
+}
+
+fun identity(a) {
+    return a;
+}

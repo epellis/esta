@@ -1,5 +1,0 @@
-fun main() {
-    var a = 4;
-    var b: num = 4;
-    var a = b;
-}

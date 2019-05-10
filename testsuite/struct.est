@@ -1,0 +1,22 @@
+struct Vector {
+    x,
+    y,
+}
+
+struct Color {
+    red,
+    green,
+    blue,
+}
+
+fun main() {
+    var v = Vector();
+    var c = Color();
+    for var i = 0; i < 2; i = i + 1; {
+        v = Vector();
+        c = Color();
+    }
+    v.x = 43;
+    v.y = 55;
+}
+

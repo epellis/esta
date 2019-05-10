@@ -1,3 +1,0 @@
-var a = True or False;
-var b = 3 == 3 and 3 <= 4;
-var c = True and not True;

@@ -24,11 +24,12 @@ extern crate env_logger;
 pub fn run(input: &str) -> Result<(), &'static str> {
     let stmts = frontend::run(input)?;
     let (stmts, md) = middleend::run(stmts)?;
-    let inst = backend::generate(stmts, md)?;
+    let (inst, data_segment) = backend::generate(stmts, md)?;
     for (j, i) in inst.iter().enumerate() {
         debug!("{: >3} {}", j, i);
     }
-    let mut vm = vm::VirtualMachine::new(inst);
+    debug!("Data Segment: {:?}", data_segment);
+    let mut vm = vm::VirtualMachine::new(inst, data_segment);
     vm.run()?;
     Ok(())
 }

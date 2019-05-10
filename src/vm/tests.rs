@@ -33,7 +33,7 @@ fn test_empty_main() {
     ALLOC 0
     RET 2";
     let instructions = Converter::raw_to_inst(raw).unwrap();
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     let mut count = 0;
     let max_count = 20;
     while let Ok(StepCode::CONTINUE) = vm.step() {
@@ -65,7 +65,7 @@ fn test_returning_main() {
     RET 1
     RET 2";
     let instructions = Converter::raw_to_inst(raw).unwrap();
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     let mut count = 0;
     let max_count = 20;
     while let Ok(StepCode::CONTINUE) = vm.step() {
@@ -104,7 +104,7 @@ fn test_returning_main_var() {
     RET 1
     RET 2";
     let instructions = Converter::raw_to_inst(raw).unwrap();
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     let mut count = 0;
     let max_count = 20;
     while let Ok(StepCode::CONTINUE) = vm.step() {
@@ -120,7 +120,7 @@ fn test_returning_main_var() {
 #[test]
 fn test_halt() {
     let instructions: Vec<Inst> = vec![Inst::new_inst(ByteCode::HALT)];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
 }
 
@@ -130,7 +130,7 @@ fn test_loadc() {
         Inst::new_data(ByteCode::LOADC, 0),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -141,7 +141,7 @@ fn test_loadrc() {
         Inst::new_data(ByteCode::LOADRC, 1),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[2].to_vec(), &vm.stack);
 }
@@ -156,7 +156,7 @@ fn test_load() {
         Inst::new_inst(ByteCode::LOAD),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[2, 2].to_vec(), &vm.stack);
 }
@@ -169,7 +169,7 @@ fn test_store() {
         Inst::new_inst(ByteCode::STORE),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[2].to_vec(), &vm.stack);
 }
@@ -182,7 +182,7 @@ fn test_pop() {
         Inst::new_inst(ByteCode::POP),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[2].to_vec(), &vm.stack);
 }
@@ -194,7 +194,7 @@ fn test_new() {
         Inst::new_inst(ByteCode::NEW),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -207,7 +207,7 @@ fn test_jump() {
         Inst::new_data(ByteCode::LOADC, 0),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -221,7 +221,7 @@ fn test_jumpz() {
         Inst::new_data(ByteCode::LOADC, 0),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -234,7 +234,7 @@ fn test_add() {
         Inst::new_inst(ByteCode::ADD),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[4].to_vec(), &vm.stack);
 }
@@ -247,7 +247,7 @@ fn test_sub() {
         Inst::new_inst(ByteCode::SUB),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -260,7 +260,7 @@ fn test_mul() {
         Inst::new_inst(ByteCode::MUL),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[4].to_vec(), &vm.stack);
 }
@@ -273,7 +273,7 @@ fn test_div() {
         Inst::new_inst(ByteCode::DIV),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -286,7 +286,7 @@ fn test_mod() {
         Inst::new_inst(ByteCode::MOD),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -299,7 +299,7 @@ fn test_and() {
         Inst::new_inst(ByteCode::AND),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -312,7 +312,7 @@ fn test_or() {
         Inst::new_inst(ByteCode::OR),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -325,7 +325,7 @@ fn test_eq() {
         Inst::new_inst(ByteCode::EQ),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -338,7 +338,7 @@ fn test_neq() {
         Inst::new_inst(ByteCode::NEQ),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -351,7 +351,7 @@ fn test_le() {
         Inst::new_inst(ByteCode::LE),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[1].to_vec(), &vm.stack);
 }
@@ -363,7 +363,7 @@ fn test_neg() {
         Inst::new_inst(ByteCode::NEG),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[-1].to_vec(), &vm.stack);
 }
@@ -375,7 +375,7 @@ fn test_not() {
         Inst::new_inst(ByteCode::NOT),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[0].to_vec(), &vm.stack);
 }
@@ -389,7 +389,7 @@ fn test_loadh() {
         Inst::new_inst(ByteCode::LOADH),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     vm.heap = vec![5, 6];
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[5, 6].to_vec(), &vm.stack);
@@ -407,7 +407,7 @@ fn test_storeh() {
         Inst::new_inst(ByteCode::STOREH),
         Inst::new_inst(ByteCode::HALT),
     ];
-    let mut vm: VirtualMachine = VirtualMachine::new(instructions);
+    let mut vm: VirtualMachine = VirtualMachine::new(instructions, vec![]);
     vm.heap = vec![0, 0];
     assert_eq!(vm.run().is_ok(), true);
     assert_eq!(&[5, 6].to_vec(), &vm.heap);

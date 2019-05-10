@@ -1,4 +1,0 @@
-fun main() {
-    var a = 4 % 2;
-    return a;
-}

@@ -1,5 +1,0 @@
-fun main() {
-    var xs = [1, 2, 3, 4];
-    var a = 3;
-    return a;
-}

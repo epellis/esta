@@ -4,6 +4,8 @@ use std::fmt;
 
 use strum::IntoEnumIterator;
 
+// TODO: Make this a higher-level VM
+
 #[derive(Debug, Eq, PartialEq, Clone, EnumIter, Display)]
 pub enum ByteCode {
     LOADC,  // Push a value to the stack

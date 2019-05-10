@@ -1,0 +1,13 @@
+fun main() {
+    var a;
+    for var i = 0; i < 10; i = i + 1; {
+        i = i + 1;
+        a = foo(4);
+    }
+    return a;
+}
+       
+fun foo(a) {
+    return -a;
+}
+

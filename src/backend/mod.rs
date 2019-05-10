@@ -4,18 +4,19 @@ mod assembly_context;
 use self::assembly_context::AsmCtx;
 use crate::frontend::ast::*;
 use crate::middleend::MetaData;
-use crate::util::bool_to_i64;
+use crate::util::{bool_to_i64, string_hash32};
 use crate::vm::bytecode::*;
 use std::collections::HashMap;
 
 type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
 
-pub fn generate(stmts: Stmt, md: MetaData) -> Result<Vec<Inst>, &'static str> {
+pub fn generate(stmts: Stmt, md: MetaData) -> Result<(Vec<Inst>, Vec<u64>), &'static str> {
     let mut ctx = AsmCtx::new(md);
     let insts = dispatch_stmt(&mut ctx, &stmts)?;
     let insts = bootstrap_startup(insts);
-    let insts = assemble(insts, ctx);
-    Ok(insts)
+    let insts = assemble(insts, &ctx);
+    let data_segment = ctx.assemble_data_segment();
+    Ok((insts, data_segment))
 }
 
 fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
@@ -263,7 +264,7 @@ fn make_binary(ctx: &mut AsmCtx, lhs: &Box<Expr>, op: &Opcode, rhs: &Box<Expr>) 
 
 fn make_unary(ctx: &mut AsmCtx, op: &Opcode, rhs: &Box<Expr>) -> DispatchRet {
     let rhs = dispatch_expr(ctx, rhs, false)?;
-    let op: ByteCode = BIN_OP_TO_BYTE.get(op).unwrap().clone();
+    let op: ByteCode = UN_OP_TO_BYTE.get(op).unwrap().clone();
     let mut insts = Vec::new();
     insts.extend(rhs);
     insts.push(MetaAsm::Inst(MetaInst::new_inst(op)));
@@ -306,6 +307,20 @@ fn make_list(ctx: &mut AsmCtx, xs: &Vec<Box<Expr>>) -> DispatchRet {
 }
 
 fn make_dot(ctx: &mut AsmCtx, this: &Identifier, action: &Box<Expr>) -> DispatchRet {
+    // TODO: Right now, this only works for accessing values
+    match *action.clone() {
+        Expr::Id(identifier) => {}
+        _ => {}
+    }
+    //    let mut insts = Vec::new();
+    //    debug!("Making: {}", &id.id);
+    //    let offset = ctx.get(&id.id)? as i64;
+    //    insts.push(MetaAsm::Inst(MetaInst::new_data(ByteCode::LOADRC, offset)));
+    //    if !l_value {
+    //        insts.push(MetaAsm::Inst(MetaInst::new_inst(ByteCode::LOAD)));
+    //    }
+    //    Ok(insts)
+
     Ok(Vec::new())
 }
 
@@ -321,7 +336,7 @@ fn bootstrap_startup(insts: Vec<MetaAsm>) -> Vec<MetaAsm> {
     prelude
 }
 
-fn assemble(insts: Vec<MetaAsm>, ctx: AsmCtx) -> Vec<Inst> {
+fn assemble(insts: Vec<MetaAsm>, ctx: &AsmCtx) -> Vec<Inst> {
     let mut labels = HashMap::new();
     let insts = insts.iter().fold(Vec::new(), |mut v, i| match i {
         MetaAsm::Inst(i) => {

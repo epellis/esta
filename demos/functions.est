@@ -1,8 +1,0 @@
-fun multiply(a, b) -> num {
-    if a <= 0 {
-        return b;
-    }
-    return b + multiply(a-b, b);
-}
-
-print(multiply(3, 4) == 12);

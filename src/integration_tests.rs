@@ -6,16 +6,16 @@ fn managed_runtime(program: &str, max_steps: usize) -> bool {
 
     let stmts = frontend::run(&program).unwrap();
     let (stmts, md) = middleend::run(stmts).unwrap();
-    let inst = backend::generate(stmts, md).unwrap();
+    let (inst, data) = backend::generate(stmts, md).unwrap();
     for (j, i) in inst.iter().enumerate() {
         debug!("{: >3} {}", j, i);
     }
-    let mut vm = vm::VirtualMachine::new(inst);
+    debug!("Data Segment: {:?}", data);
+    let mut vm = vm::VirtualMachine::new(inst, data);
     let mut count = 0;
-    let max_count = 2000;
     while let Ok(StepCode::CONTINUE) = vm.step() {
         count += 1;
-        if count > max_count {
+        if count > max_steps {
             return false;
             break;
         }
@@ -23,18 +23,9 @@ fn managed_runtime(program: &str, max_steps: usize) -> bool {
     true
 }
 
-#[test]
-fn test_function_calls() {
+fn do_tests(paths: &Vec<&str>, limit: usize) {
     use std::fs;
-    let limit = 2000;
 
-    let paths = vec![
-        "demos/simple_function.est",
-        "demos/simple_function2.est",
-        "demos/simple_function3.est",
-        "demos/simple_function4.est",
-        //        "demos/simple_function5.est",
-    ];
     let res = paths
         .iter()
         .map(|p| fs::read_to_string(p).expect("Couldn't read file!"))
@@ -44,4 +35,44 @@ fn test_function_calls() {
         .map(|(r, p)| r)
         .fold(true, |acc, res| acc && res);
     assert_eq!(res, true);
+}
+
+#[test]
+fn test_function_calls() {
+    let paths = vec![
+        "testsuite/simple_function1.est",
+        "testsuite/simple_function2.est",
+        "testsuite/simple_function3.est",
+        "testsuite/simple_function4.est",
+        "testsuite/simple_function5.est",
+    ];
+    do_tests(&paths, 2000);
+}
+
+#[test]
+fn test_control_flow() {
+    let paths = vec![
+        "testsuite/while.est",
+        "testsuite/for.est",
+        "testsuite/if.est",
+    ];
+    do_tests(&paths, 20000);
+}
+
+#[test]
+fn test_assignments() {
+    let paths = vec!["testsuite/assignment.est"];
+    do_tests(&paths, 2000);
+}
+
+#[test]
+fn test_struct() {
+    let paths = vec!["testsuite/struct.est"];
+    do_tests(&paths, 2000);
+}
+
+#[test]
+fn test_real_world() {
+    let paths = vec!["testsuite/realworld.est"];
+    do_tests(&paths, 20000);
 }

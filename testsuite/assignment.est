@@ -1,0 +1,9 @@
+fun main() {
+    var a;
+    a = 0;
+    var b = a;
+    var c = a + b;
+    var d = a * b * c;
+    var e = -d;
+}
+

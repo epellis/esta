@@ -1,0 +1,15 @@
+fun main() {
+    var a = 0;
+    while a < 100 {
+        a = a + 1;
+    }
+    
+    var b = 0;
+    a = 0;
+    while a < 20 {
+        while b < 20 {
+            b = b + 1;
+        }
+        a = a + 1;
+    }
+}

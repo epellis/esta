@@ -1,0 +1,17 @@
+fun main() {
+    if True {
+        var i = 0;
+    }
+
+    if True {
+        var j = 0;
+    } else {
+        var j = 1;
+    }
+
+    var t = False;
+    if t { 
+        var k = 0;
+    }
+}
+

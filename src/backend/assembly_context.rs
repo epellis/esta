@@ -2,6 +2,8 @@ use super::allocation::Alloc;
 use crate::frontend::ast::EstaStruct;
 use crate::middleend::MetaData;
 use crate::util::stack::Stack;
+use crate::util::string_hash32;
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -70,13 +72,46 @@ impl AsmCtx {
         Err("Couldn't find id")
     }
     pub fn get_esta_struct(&self, id: &str) -> Option<EstaStruct> {
-        //        debug!("Looking for: {}", id);
-        //        debug!("Options: {:?}", &self.md.structs);
         for s in &self.md.structs {
             if s.id == id {
                 return Some(s.clone());
             }
         }
         None
+    }
+    pub fn assemble_data_segment(&self) -> Vec<u64> {
+        // Construct a vec of mappings from the hash of a field to it's offset
+        // in the struct
+        let struct_seg = self
+            .md
+            .structs
+            .iter()
+            .map(|s| {
+                s.fields
+                    .keys()
+                    .cloned()
+                    .map(string_hash32)
+                    .interleave_shortest(0..)
+                    .collect::<Vec<u64>>()
+            })
+            .collect::<Vec<Vec<u64>>>();
+
+        // Construct a vec of offsets, where every offset is the offset of the struct
+        // at that index
+        let offsets = struct_seg
+            .iter()
+            .scan(0, |off, v| {
+                let old_off = *off;
+                *off += v.len();
+                Some(old_off)
+            })
+            .map(|p| p + struct_seg.len())
+            .map(|p| p as u64)
+            .collect::<Vec<u64>>();
+
+        offsets
+            .into_iter()
+            .chain(struct_seg.into_iter().flatten())
+            .collect::<Vec<u64>>()
     }
 }
