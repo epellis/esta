@@ -39,6 +39,10 @@ print(multiply(3, 4) == 12);
 ## Development
 
 You are welcome to check the project out and try some of the demos provided.
+
+__WARNING__: Please note that at it's current state, Esta is pre-alpha and is experiences
+radical, breaking changes daily.
+
 ```
 git clone https://github.com/epellis/esta.git
 cd esta
@@ -46,8 +50,8 @@ cargo build
 RUST_LOG=esta=debug cargo run demos/hello.est
 ```
 
-You can also measure performance by evaluating a recursive
-Fibonacci Sequence O(n^2) calculation.
+You can also measure performance by evaluating the
+Fibonacci Sequence using a naive recursive O(n^2) algorithm.
 ```
 cargo bench
 ```

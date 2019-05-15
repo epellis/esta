@@ -6,8 +6,9 @@ use strum::IntoEnumIterator;
 pub enum ByteCode {
     HALT,  // Halts the Virtual Machine
     POP,   // Pops off the top item on the stack
-    ADD,   // Add two numbers on the top of the stack and push the result
-    LOADC, // Push a constant 16-bit integer to the top of stack
+    ADD,   // Pops off the top two items from the stack, tries to add and push a result
+    LOADC, // Loads an EstaData from the constant's pool for that function and pushes to stack
+    LOADV, // Loads an EstaData variable from the environment's pool and pushes to stack
 }
 
 impl From<u8> for ByteCode {
@@ -34,6 +35,7 @@ lazy_static! {
         m.insert(ByteCode::POP, 0);
         m.insert(ByteCode::ADD, 0);
         m.insert(ByteCode::LOADC, 1);
+        m.insert(ByteCode::LOADV, 2);
         m
     };
 }
