@@ -57,6 +57,5 @@ cargo bench
 _WIP_: Installer coming soon
 
 ```
-cargo build --release
-cargo run my_program.est
+cargo run --release my_program.est
 ```
