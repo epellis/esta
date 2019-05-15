@@ -16,13 +16,12 @@ fn run_instructions(
 
     let insts = assemble_metainst(&insts);
     println!("Instructions: {:?}", disassemble_u8(&insts));
-    println!("Instructions: {:x?}", insts.as_slice());
+    println!("Instructions (Bytecode): {:x?}", insts.as_slice());
 
     let mut vm = VirtualMachine::new(insts, consts, context_alloc);
     let res = vm.run();
-    match res {
-        Ok(()) => {}
-        Err(e) => println!("Test finished with error: {}", e),
+    if let Err(e) = res {
+        println!("Test finished with error: {}", e);
     }
     assert!(res.is_ok());
     vm

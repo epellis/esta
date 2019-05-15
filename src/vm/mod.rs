@@ -46,7 +46,13 @@ impl VirtualMachine {
             "Inst: {:?}",
             disassemble_u8(&self.insts[self.pc..].to_vec())
         );
-        // TODO: Setup global stage
+
+        // Alloc space in GLOBAL environment for variables
+        let mem_size = self.context_alloc.get("GLOBAL").or(Some(&0)).unwrap();
+        let mut global_envs = Vec::new();
+        global_envs.resize(*mem_size, Default::default());
+        self.push_envs(global_envs);
+
         while VMStatus::RUNNING == self.step()? {
             debug!("{}", self);
             debug!(
@@ -104,7 +110,9 @@ impl VirtualMachine {
     }
 
     // Makes a
-    fn push_envs(&mut self, ctx: Vec<EstaData>) {}
+    fn push_envs(&mut self, env: Vec<EstaData>) {
+        self.envs.push(env);
+    }
 
     fn read_inst_i16(&mut self) -> i16 {
         let upper = self.insts[self.pc];
@@ -133,7 +141,7 @@ pub enum VMStatus {
     FATAL,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct EstaData {
     data: EstaType,
 }
@@ -155,4 +163,11 @@ impl EstaData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum EstaType {
     Num(i32),
+    Nil,
+}
+
+impl Default for EstaType {
+    fn default() -> Self {
+        EstaType::Nil
+    }
 }
