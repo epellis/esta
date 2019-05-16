@@ -17,6 +17,6 @@ pub fn run(input: &str) -> Result<Stmt, &'static str> {
     let stmts = grammar::StmtsParser::new()
         .parse(input)
         .map_err(|_| "Parsing Error")?;
-    let mut stmts = Stmt::Block(stmts, false);
+    let stmts = Stmt::Block(stmts, false);
     Ok(stmts)
 }

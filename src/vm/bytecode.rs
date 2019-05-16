@@ -1,14 +1,18 @@
+use crate::vm::EstaType;
 use std::collections::HashMap;
 use std::convert::From;
 use strum::IntoEnumIterator;
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, EnumIter, Display, Hash)]
 pub enum ByteCode {
-    HALT,  // Halts the Virtual Machine
-    POP,   // Pops off the top item on the stack
-    ADD,   // Pops off the top two items from the stack, tries to add and push a result
-    LOADC, // Loads an EstaData from the constant's pool for that function and pushes to stack
-    LOADV, // Loads an EstaData variable from the environment's pool and pushes to stack
+    HALT,   // Halts the Virtual Machine
+    POP,    // Pops off the top item on the stack
+    ADD,    // Pops off the top two items from the stack, tries to add and push a result
+    LOADC,  // Loads an EstaData from the constant's pool for that function and pushes to stack
+    LOADV,  // Loads an EstaData variable from the environment's pool and pushes to stack
+    STOREV, // Stores the top of stack to the environment's pool
+    PUSHF,  // Pushes a new stack frame, one argument is the number of local variables
+    POPF,   // Pops the first stack frame
 }
 
 impl From<u8> for ByteCode {
@@ -36,6 +40,9 @@ lazy_static! {
         m.insert(ByteCode::ADD, 0);
         m.insert(ByteCode::LOADC, 1);
         m.insert(ByteCode::LOADV, 2);
+        m.insert(ByteCode::STOREV, 2);
+        m.insert(ByteCode::PUSHF, 1);
+        m.insert(ByteCode::POPF, 1);
         m
     };
 }
@@ -44,17 +51,22 @@ lazy_static! {
 pub enum MetaInst {
     ByteCode(ByteCode),
     Number(i16),
+    Label(String),
+    Const(EstaType),
 }
 
-pub fn assemble_metainst(v: &Vec<MetaInst>) -> Vec<u8> {
-    v.iter()
-        .map(|i| match i {
-            MetaInst::ByteCode(b) => vec![b.clone().into()],
-            MetaInst::Number(n) => n.to_le_bytes().to_vec(),
-        })
-        .flatten()
-        .collect()
-}
+//// TODO: Add a way to generate consts and context_alloc on bytecode generation
+//pub fn assemble_metainst(v: &Vec<MetaInst>) -> Vec<u8> {
+//    v.iter()
+//        .map(|i| match i {
+//            MetaInst::ByteCode(b) => vec![b.clone().into()],
+//            MetaInst::Number(n) => n.to_le_bytes().to_vec(),
+//            MetaInst::Label(_) => Vec::new(),
+//            MetaInst::Const(_) => Vec::new(),
+//        })
+//        .flatten()
+//        .collect()
+//}
 
 pub fn disassemble_u8(v: &Vec<u8>) -> Vec<MetaInst> {
     let mut idx = 0;

@@ -1,3 +1,4 @@
+use crate::backend::program::*;
 use crate::vm::bytecode::*;
 use std::collections::HashMap;
 use std::fmt;
@@ -6,36 +7,49 @@ pub mod bytecode;
 #[cfg(test)]
 mod tests;
 
-/// The Esta Virtual Machine
+/// # The Esta Virtual Machine
 ///
 /// Inspired by the Python VM
+///
+/// ## Constants (Consts) Field
+/// This section carries data constants specific to a certain function.
+/// For example, if a function foo calculates 2 + 2, then 2 is a constant
+/// in the foo section.
+///
+/// When a VM is initialized, a mapping between the context and a vec of consts
+/// must be passed to the newly created struct.
+///
+/// ## Context Allocation Field
+/// This section carries a mapping from the context to the number of local variables
+/// and is used as a LUT to allocate the correct number of local variables upon a
+/// function invocation.
+///
+/// ## Frames Field
+/// The frames section is a stack of variable bindings, one per every scope.
+/// When a function is entered, all declared variables are initialized to Nil and then
+/// as the process evolves, these may be updated or used.
 #[derive(Debug)]
 pub struct VirtualMachine {
-    insts: Vec<u8>,                         // An array of bytecode instructions
-    frames: Vec<Vec<EstaData>>,             // A stack of frames, one for each scope
-    envs: Vec<Vec<EstaData>>,               // A stack of variable bindings, one for each scope
+    insts: Vec<u8>,             // An array of bytecode instructions
+    frames: Vec<Vec<EstaData>>, // A stack of frames, one for each scope
+    //    envs: Vec<Vec<EstaData>>,               // A stack of variable bindings, one for each scope
     consts: HashMap<String, Vec<EstaData>>, // A mapping for all constants specific to a function
     context: String,                        // The current executing function. Used to lookup consts
+    // TODO: Eventually this can be merged into the function call opcode as a parameter
     context_alloc: HashMap<String, usize>, // A mapping between the function and the number of locals
     pc: usize,                             // Program counter. Indexes current instruction
 }
 
 impl VirtualMachine {
-    pub fn new(
-        insts: Vec<u8>,
-        consts: HashMap<String, Vec<EstaData>>,
-        context_alloc: HashMap<String, usize>,
-    ) -> VirtualMachine {
-        assert!(!insts.is_empty());
+    pub fn new(prog: Program) -> VirtualMachine {
+        assert!(!prog.insts.is_empty());
         let frames = vec![Vec::new()];
-        let envs = vec![Vec::new()];
         VirtualMachine {
-            insts,
+            insts: prog.insts,
             frames,
-            envs,
-            consts,
+            consts: prog.consts,
             context: "GLOBAL".to_string(),
-            context_alloc,
+            context_alloc: prog.context_alloc,
             pc: 0,
         }
     }
@@ -47,11 +61,11 @@ impl VirtualMachine {
             disassemble_u8(&self.insts[self.pc..].to_vec())
         );
 
-        // Alloc space in GLOBAL environment for variables
-        let mem_size = self.context_alloc.get("GLOBAL").or(Some(&0)).unwrap();
-        let mut global_envs = Vec::new();
-        global_envs.resize(*mem_size, Default::default());
-        self.push_envs(global_envs);
+        //        // Alloc space in GLOBAL environment for variables
+        //        let mem_size = self.context_alloc.get("GLOBAL").or(Some(&0)).unwrap();
+        //        let mut global_envs = Vec::new();
+        //        global_envs.resize(*mem_size, Default::default());
+        //        self.push_envs(global_envs);
 
         while VMStatus::RUNNING == self.step()? {
             debug!("{}", self);
@@ -63,7 +77,7 @@ impl VirtualMachine {
         Ok(())
     }
 
-    fn step(&mut self) -> Result<VMStatus, &'static str> {
+    pub fn step(&mut self) -> Result<VMStatus, &'static str> {
         let inst = BYTECODE_ARRAY[self.insts[self.pc] as usize].clone();
         self.pc += 1;
 
@@ -75,10 +89,16 @@ impl VirtualMachine {
                 return Ok(VMStatus::HALTED);
             }
             ByteCode::LOADV => {
-                let offset = self.envs.len() - 1 - self.read_inst_i16() as usize;
+                let offset = self.frames.len() - 1 - self.read_inst_i16() as usize;
                 let idx = self.read_inst_i16() as usize;
-                let data = self.envs[offset][idx].clone();
+                let data = self.frames[offset][idx].clone();
                 self.push_top(data);
+            }
+            ByteCode::STOREV => {
+                let offset = self.frames.len() - 1 - self.read_inst_i16() as usize;
+                let idx = self.read_inst_i16() as usize;
+                let data = self.peek_top()?;
+                self.frames[offset][idx] = data;
             }
             ByteCode::LOADC => {
                 let idx = self.read_inst_i16() as usize;
@@ -94,14 +114,33 @@ impl VirtualMachine {
                 let result = EstaData::new_add(lhs, rhs)?;
                 self.push_top(result);
             }
+            ByteCode::PUSHF => {
+                let local_count = self.read_inst_i16() as usize;
+                let mut frame = Vec::new();
+                frame.resize(local_count, Default::default());
+                self.frames.push(frame);
+            }
+            ByteCode::POPF => {
+                self.frames.pop();
+            }
         }
 
         Ok(VMStatus::RUNNING)
     }
 
+    fn peek_top(&mut self) -> Result<EstaData, &'static str> {
+        let idx = self.frames.len() - 1;
+        self.frames[idx]
+            .last()
+            .cloned()
+            .ok_or_else(|| "Frame is empty")
+    }
+
     fn pop_top(&mut self) -> Result<EstaData, &'static str> {
         let idx = self.frames.len() - 1;
-        self.frames[idx].pop().ok_or_else(|| "Frame is empty")
+        let top = self.peek_top();
+        self.frames[idx].pop();
+        top
     }
 
     fn push_top(&mut self, data: EstaData) {
@@ -109,10 +148,10 @@ impl VirtualMachine {
         self.frames[idx].push(data);
     }
 
-    // Makes a
-    fn push_envs(&mut self, env: Vec<EstaData>) {
-        self.envs.push(env);
-    }
+    //    // Makes a new environment and pushes it to the environment stack
+    //    fn push_frame(&mut self, frame: Vec<EstaData>) {
+    //        self.envs.push(env);
+    //    }
 
     fn read_inst_i16(&mut self) -> i16 {
         let upper = self.insts[self.pc];

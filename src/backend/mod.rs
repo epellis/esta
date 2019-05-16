@@ -1,19 +1,80 @@
+pub mod program;
+
+use self::program::{AsmCtx, Program};
 use crate::frontend::ast::*;
 use crate::middleend::MetaData;
+use crate::util::fold::*;
 use crate::util::{bool_to_i64, string_hash32};
-//use crate::vm::bytecode::*;
+use crate::vm::bytecode::*;
 use std::collections::HashMap;
 
-//type DispatchRet = Result<Vec<MetaAsm>, &'static str>;
-
-pub fn generate(stmts: Stmt, md: MetaData) -> Result<(Vec<u8>, Vec<u64>), &'static str> {
+pub fn generate(stmts: Stmt, md: MetaData) -> Result<Program, &'static str> {
     //    let mut ctx = AsmCtx::new(md);
     //    let insts = dispatch_stmt(&mut ctx, &stmts)?;
     //    let insts = bootstrap_startup(insts);
     //    let insts = assemble(insts, &ctx);
     //    let data_segment = ctx.assemble_data_segment();
     //    Ok((insts, data_segment))
-    Ok((Vec::new(), Vec::new()))
+    //    Ok((Default::default()))
+    Assembler::assemble(&stmts)
+}
+
+pub struct Assembler;
+
+impl Assembler {
+    pub fn assemble(body: &Stmt) -> Result<Program, &'static str> {
+        let ctx: AsmCtx = Default::default();
+        let ctx = Assembler::fold_stmt(&ctx, body).ok_or("Failed to assemble program")?;
+
+        let instructions = ctx.assemble();
+
+        Err("Not implemented")
+    }
+}
+
+impl Fold for Assembler {
+    type UpT = AsmCtx;
+    type DownT = AsmCtx;
+
+    fn reduce(children: Vec<Option<Self::UpT>>) -> Option<Self::UpT> {
+        if children.len() > 0 {
+            let base = children.last().cloned().unwrap().unwrap().base;
+            let suffix = children.last().cloned().unwrap().unwrap().suffix;
+            let blocks = children
+                .into_iter()
+                .flatten()
+                .map(|c: AsmCtx| -> Vec<MetaInst> { c.blocks })
+                .flatten()
+                .collect();
+            Some(AsmCtx {
+                base,
+                blocks,
+                suffix,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn fold_block(down: &Self::DownT, body: &Vec<Box<Stmt>>, is_scope: &bool) -> Option<Self::UpT> {
+        let mut block = Vec::new();
+        block.push(MetaInst::ByteCode(ByteCode::PUSHF));
+        block.push(MetaInst::Number(0));
+
+        let children = body.iter().map(|b| Self::fold_stmt(down, b)).collect();
+
+        if let Some(mut child) = Assembler::reduce(children) {
+            block.extend(child.blocks);
+            block.push(MetaInst::ByteCode(ByteCode::POPF));
+            child.blocks = block;
+            return Some(child);
+        } else {
+            block.push(MetaInst::ByteCode(ByteCode::POPF));
+            let mut ctx = down.clone();
+            ctx.blocks = block;
+            return Some(ctx);
+        }
+    }
 }
 
 //fn dispatch_stmt(ctx: &mut AsmCtx, s: &Stmt) -> DispatchRet {
