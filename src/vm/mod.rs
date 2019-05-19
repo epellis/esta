@@ -24,48 +24,44 @@ mod tests;
 /// and is used as a LUT to allocate the correct number of local variables upon a
 /// function invocation.
 ///
-/// ## Frames Field
+/// ## Env Field
 /// The frames section is a stack of variable bindings, one per every scope.
 /// When a function is entered, all declared variables are initialized to Nil and then
 /// as the process evolves, these may be updated or used.
+///
+/// ## Stack Field
+/// The stack section is a stack of EstaData, which is used to hold intermediate
+/// values during computations.
 #[derive(Debug)]
 pub struct VirtualMachine {
-    insts: Vec<u8>,             // An array of bytecode instructions
-    frames: Vec<Vec<EstaData>>, // A stack of frames, one for each scope
-    //    envs: Vec<Vec<EstaData>>,               // A stack of variable bindings, one for each scope
-    consts: HashMap<String, Vec<EstaData>>, // A mapping for all constants specific to a function
-    context: String,                        // The current executing function. Used to lookup consts
-    // TODO: Eventually this can be merged into the function call opcode as a parameter
-    context_alloc: HashMap<String, usize>, // A mapping between the function and the number of locals
-    pc: usize,                             // Program counter. Indexes current instruction
+    insts: Vec<u8>,            // An array of bytecode instructions
+    stack: Vec<Vec<EstaData>>, // A stack of frames, one for each function
+    env: Vec<Vec<EstaData>>,   // A stack of variable bindings, one for each scope
+    consts: Vec<EstaData>,     // All constants used in the program
+    context: String,           // The current executing function. Used to lookup consts
+    pc: usize,                 // Program counter. Indexes current instruction
 }
 
 impl VirtualMachine {
     pub fn new(prog: Program) -> VirtualMachine {
         assert!(!prog.insts.is_empty());
-        let frames = vec![Vec::new()];
+        let stack = vec![Vec::new()];
+        let env = vec![Vec::new()];
         VirtualMachine {
             insts: prog.insts,
-            frames,
+            stack,
+            env,
             consts: prog.consts,
             context: "GLOBAL".to_string(),
-            context_alloc: prog.context_alloc,
             pc: 0,
         }
     }
 
     pub fn run(&mut self) -> Result<(), &'static str> {
         debug!("{}", self);
-        debug!(
-            "Inst: {:?}",
-            disassemble_u8(&self.insts[self.pc..].to_vec())
-        );
-
-        //        // Alloc space in GLOBAL environment for variables
-        //        let mem_size = self.context_alloc.get("GLOBAL").or(Some(&0)).unwrap();
-        //        let mut global_envs = Vec::new();
-        //        global_envs.resize(*mem_size, Default::default());
-        //        self.push_envs(global_envs);
+        debug!("Inst: {:?}", disassemble_u8(&self.insts));
+        debug!("Raw Inst: {:?}", &self.insts);
+        debug!("Consts: {:?}", self.consts);
 
         while VMStatus::RUNNING == self.step()? {
             debug!("{}", self);
@@ -88,25 +84,30 @@ impl VirtualMachine {
             ByteCode::HALT => {
                 return Ok(VMStatus::HALTED);
             }
+            ByteCode::JUMP => {
+                self.pc = self.read_inst_i16() as usize;
+            }
+            ByteCode::JUMPF => {
+                let pc = self.read_inst_i16() as usize;
+                if !self.pop_top()?.eval_bool()? {
+                    self.pc = pc
+                }
+            }
             ByteCode::LOADV => {
-                let offset = self.frames.len() - 1 - self.read_inst_i16() as usize;
+                let offset = self.env.len() - 1 - self.read_inst_i16() as usize;
                 let idx = self.read_inst_i16() as usize;
-                let data = self.frames[offset][idx].clone();
+                let data = self.env[offset][idx].clone();
                 self.push_top(data);
             }
             ByteCode::STOREV => {
-                let offset = self.frames.len() - 1 - self.read_inst_i16() as usize;
+                let offset = self.env.len() - 1 - self.read_inst_i16() as usize;
                 let idx = self.read_inst_i16() as usize;
                 let data = self.peek_top()?;
-                self.frames[offset][idx] = data;
+                self.env[offset][idx] = data;
             }
             ByteCode::LOADC => {
                 let idx = self.read_inst_i16() as usize;
-                let consts = self
-                    .consts
-                    .get(&self.context)
-                    .ok_or_else(|| "Const not found")?;
-                self.push_top(consts[idx].clone())
+                self.push_top(self.consts[idx].clone())
             }
             ByteCode::ADD => {
                 let rhs = self.pop_top()?;
@@ -114,14 +115,20 @@ impl VirtualMachine {
                 let result = EstaData::new_add(lhs, rhs)?;
                 self.push_top(result);
             }
-            ByteCode::PUSHF => {
+            ByteCode::PUSHE => {
                 let local_count = self.read_inst_i16() as usize;
                 let mut frame = Vec::new();
                 frame.resize(local_count, Default::default());
-                self.frames.push(frame);
+                self.env.push(frame);
             }
-            ByteCode::POPF => {
-                self.frames.pop();
+            ByteCode::POPE => {
+                self.env.pop();
+            }
+            ByteCode::PUSHS => {
+                self.stack.push(Vec::new());
+            }
+            ByteCode::POPS => {
+                self.stack.pop();
             }
         }
 
@@ -129,29 +136,24 @@ impl VirtualMachine {
     }
 
     fn peek_top(&mut self) -> Result<EstaData, &'static str> {
-        let idx = self.frames.len() - 1;
-        self.frames[idx]
+        let idx = self.stack.len() - 1;
+        self.stack[idx]
             .last()
             .cloned()
             .ok_or_else(|| "Frame is empty")
     }
 
     fn pop_top(&mut self) -> Result<EstaData, &'static str> {
-        let idx = self.frames.len() - 1;
+        let idx = self.stack.len() - 1;
         let top = self.peek_top();
-        self.frames[idx].pop();
+        self.stack[idx].pop();
         top
     }
 
     fn push_top(&mut self, data: EstaData) {
-        let idx = self.frames.len() - 1;
-        self.frames[idx].push(data);
+        let idx = self.stack.len() - 1;
+        self.stack[idx].push(data);
     }
-
-    //    // Makes a new environment and pushes it to the environment stack
-    //    fn push_frame(&mut self, frame: Vec<EstaData>) {
-    //        self.envs.push(env);
-    //    }
 
     fn read_inst_i16(&mut self) -> i16 {
         let upper = self.insts[self.pc];
@@ -164,11 +166,11 @@ impl VirtualMachine {
 
 impl fmt::Display for VirtualMachine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let top_frame = &self.frames[self.frames.len() - 1];
+        let top_stack = &self.stack[self.stack.len() - 1];
         write!(
             f,
-            "VM | PC: {} | Context: {} | Frame: {:?}",
-            self.pc, self.context, top_frame
+            "VM | PC: {} | Context: {} | Stack: {:?}",
+            self.pc, self.context, top_stack
         )
     }
 }
@@ -180,7 +182,7 @@ pub enum VMStatus {
     FATAL,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Eq, Hash)]
 pub struct EstaData {
     data: EstaType,
 }
@@ -191,17 +193,30 @@ impl EstaData {
             data: EstaType::Num(data),
         }
     }
+    pub fn new_bool(data: bool) -> EstaData {
+        EstaData {
+            data: EstaType::Bool(data),
+        }
+    }
     pub fn new_add(lhs: EstaData, rhs: EstaData) -> Result<EstaData, &'static str> {
         match (lhs.data, rhs.data) {
             (EstaType::Num(lhs), EstaType::Num(rhs)) => Ok(EstaData::new_int(lhs + rhs)),
             _ => Err("Incompatible Types"),
         }
     }
+    pub fn eval_bool(self) -> Result<bool, &'static str> {
+        if let EstaType::Bool(b) = self.data {
+            Ok(b)
+        } else {
+            Err("Self is not a boolean type")
+        }
+    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EstaType {
     Num(i32),
+    Bool(bool),
     Nil,
 }
 

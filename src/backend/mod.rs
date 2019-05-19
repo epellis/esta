@@ -6,16 +6,11 @@ use crate::middleend::MetaData;
 use crate::util::fold::*;
 use crate::util::{bool_to_i64, string_hash32};
 use crate::vm::bytecode::*;
+use crate::vm::{EstaData, EstaType};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 pub fn generate(stmts: Stmt, md: MetaData) -> Result<Program, &'static str> {
-    //    let mut ctx = AsmCtx::new(md);
-    //    let insts = dispatch_stmt(&mut ctx, &stmts)?;
-    //    let insts = bootstrap_startup(insts);
-    //    let insts = assemble(insts, &ctx);
-    //    let data_segment = ctx.assemble_data_segment();
-    //    Ok((insts, data_segment))
-    //    Ok((Default::default()))
     Assembler::assemble(&stmts)
 }
 
@@ -27,8 +22,9 @@ impl Assembler {
         let ctx = Assembler::fold_stmt(&ctx, body).ok_or("Failed to assemble program")?;
 
         let instructions = ctx.assemble();
+        Ok(instructions)
 
-        Err("Not implemented")
+        //        Err("Not implemented")
     }
 }
 
@@ -36,20 +32,28 @@ impl Fold for Assembler {
     type UpT = AsmCtx;
     type DownT = AsmCtx;
 
+    /// To reduce, collect all program blocks into a single vector and adopt the
+    /// last (aka latest) base and suffix as it's own.
     fn reduce(children: Vec<Option<Self::UpT>>) -> Option<Self::UpT> {
+        let children = children.into_iter().flatten().collect::<Vec<Self::UpT>>();
+
         if children.len() > 0 {
-            let base = children.last().cloned().unwrap().unwrap().base;
-            let suffix = children.last().cloned().unwrap().unwrap().suffix;
+            let last_ctx = children.last().cloned().unwrap();
+            let declarations = children
+                .iter()
+                .cloned()
+                .map(|c: AsmCtx| -> Vec<String> { c.declarations })
+                .flatten()
+                .collect();
             let blocks = children
                 .into_iter()
-                .flatten()
                 .map(|c: AsmCtx| -> Vec<MetaInst> { c.blocks })
                 .flatten()
                 .collect();
             Some(AsmCtx {
-                base,
                 blocks,
-                suffix,
+                declarations,
+                ..last_ctx
             })
         } else {
             None
@@ -57,23 +61,115 @@ impl Fold for Assembler {
     }
 
     fn fold_block(down: &Self::DownT, body: &Vec<Box<Stmt>>, is_scope: &bool) -> Option<Self::UpT> {
-        let mut block = Vec::new();
-        block.push(MetaInst::ByteCode(ByteCode::PUSHF));
-        block.push(MetaInst::Number(0));
-
         let children = body.iter().map(|b| Self::fold_stmt(down, b)).collect();
 
         if let Some(mut child) = Assembler::reduce(children) {
+            let mut block = Vec::new();
+            block.push(MetaInst::ByteCode(ByteCode::PUSHE));
+            block.push(MetaInst::Number(child.declarations.len() as i16));
+            for id in child.declarations {
+                block.push(MetaInst::Declaration(id.clone()));
+            }
+            child.declarations = Vec::new();
+
             block.extend(child.blocks);
-            block.push(MetaInst::ByteCode(ByteCode::POPF));
+            block.push(MetaInst::ByteCode(ByteCode::POPE));
             child.blocks = block;
             return Some(child);
         } else {
-            block.push(MetaInst::ByteCode(ByteCode::POPF));
-            let mut ctx = down.clone();
-            ctx.blocks = block;
-            return Some(ctx);
+            return Some(Default::default());
         }
+    }
+
+    //    fn fold_if(
+    //        down: &Self::DownT,
+    //        test: &Box<Expr>,
+    //        body: &Box<Stmt>,
+    //        alter: &Box<Stmt>,
+    //    ) -> Option<Self::UpT> {
+    //        let mut down = down.clone();
+    //        let alter_lbl = down.next_label();
+    //        let cont_lbl = down.next_label();
+    //
+    //        let test = Self::fold_expr(&down, test).unwrap_or_default();
+    //        let body = Self::fold_stmt(&down, body).unwrap_or_default();
+    //        let alter = Self::fold_stmt(&down, alter).unwrap_or_default();
+    //
+    //        let base = alter.base.clone();
+    //        let suffix = alter.suffix.clone();
+    //
+    //        // Test Block
+    //        let mut blocks = Vec::new();
+    //        blocks.extend(test.blocks);
+    //        // TODO: It is inelegant that we need to use labels as jump arguments and as
+    //        //  undetermined points to jump to
+    //        blocks.push(MetaInst::ByteCode(ByteCode::JUMPF));
+    //        blocks.push(MetaInst::Label(alter_lbl.clone()));
+    //
+    //        // Body Block
+    //        blocks.extend(body.blocks);
+    //        blocks.push(MetaInst::ByteCode(ByteCode::JUMP));
+    //        blocks.push(MetaInst::Label(cont_lbl.clone()));
+    //
+    //        // Alternate Block
+    //        blocks.push(MetaInst::Label(alter_lbl.clone()));
+    //        blocks.extend(alter.blocks);
+    //
+    //        // Continuation Block
+    //        blocks.push(MetaInst::Label(cont_lbl.clone()));
+    //
+    //        // TODO: Replace with ..alter constructor
+    //        Some(AsmCtx {
+    //            base,
+    //            blocks,
+    //            suffix,
+    //        })
+    //    }
+
+    // A declaration sets up a scope-local variable
+    fn fold_declaration(down: &Self::DownT, id: &Identifier) -> Option<Self::UpT> {
+        let mut down = down.clone();
+        down.declarations.push(id.id.clone());
+        Some(down)
+    }
+
+    // The LHS will become a location in the environment (e.g. 0, 0). The RHS is a value,
+    // which will be stored at this location.
+    fn fold_assignment(down: &Self::DownT, lhs: &Box<Expr>, rhs: &Box<Expr>) -> Option<Self::UpT> {
+        let children = [rhs, lhs]
+            .iter()
+            .map(|e| Self::fold_expr(down, e))
+            .collect();
+
+        let mut ctx = Self::reduce(children).unwrap();
+        ctx.blocks.push(MetaInst::ByteCode(ByteCode::STOREV));
+        // TODO: StoreV needs to get the arguments as to where to store the value here
+        ctx.blocks.push(MetaInst::ByteCode(ByteCode::POP));
+        Some(ctx)
+    }
+
+    // Pushes an identifier instruction, which will resolve to the location of the declared
+    // identifier
+    fn fold_id(down: &Self::DownT, id: &Identifier) -> Option<Self::UpT> {
+        let mut ctx = down.clone();
+        ctx.blocks.push(MetaInst::Identifier(id.id.clone()));
+        Some(ctx)
+    }
+
+    fn fold_literal(down: &Self::DownT, lit: &Literal) -> Option<Self::UpT> {
+        let mut ctx = down.clone();
+
+        // TODO: It is a bit strange that there are two different literal types, and
+        //  in the future, this should be combined into one.
+        let data = match lit {
+            Literal::Number(n) => EstaData::new_int(*n as i32),
+            Literal::Boolean(b) => EstaData::new_bool(*b),
+            _ => Default::default(),
+        };
+
+        ctx.blocks.push(MetaInst::Const(data));
+
+        Some(ctx)
     }
 }
 
@@ -100,20 +196,6 @@ impl Fold for Assembler {
 //        Expr::List(xs) => make_list(ctx, &xs),
 //        Expr::Dot(this, action) => make_dot(ctx, &this, &action),
 //    }
-//}
-//
-//fn make_block(ctx: &mut AsmCtx, body: &Vec<Box<Stmt>>, is_scope: &bool) -> DispatchRet {
-//    if *is_scope {
-//        ctx.push_scope();
-//    }
-//    let mut insts = Vec::new();
-//    for b in body {
-//        insts.extend(dispatch_stmt(ctx, b)?);
-//    }
-//    if *is_scope {
-//        ctx.pop_scope();
-//    }
-//    Ok(insts)
 //}
 //
 //fn make_if(ctx: &mut AsmCtx, test: &Box<Expr>, body: &Box<Stmt>, alter: &Box<Stmt>) -> DispatchRet {

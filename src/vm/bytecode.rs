@@ -1,4 +1,4 @@
-use crate::vm::EstaType;
+use crate::vm::{EstaData, EstaType};
 use std::collections::HashMap;
 use std::convert::From;
 use strum::IntoEnumIterator;
@@ -6,13 +6,17 @@ use strum::IntoEnumIterator;
 #[derive(Debug, Eq, PartialEq, Clone, Copy, EnumIter, Display, Hash)]
 pub enum ByteCode {
     HALT,   // Halts the Virtual Machine
+    JUMP,   // Set PC to argument
+    JUMPF,  // Pops top, if top == False, then set PC to argument
     POP,    // Pops off the top item on the stack
     ADD,    // Pops off the top two items from the stack, tries to add and push a result
     LOADC,  // Loads an EstaData from the constant's pool for that function and pushes to stack
     LOADV,  // Loads an EstaData variable from the environment's pool and pushes to stack
     STOREV, // Stores the top of stack to the environment's pool
-    PUSHF,  // Pushes a new stack frame, one argument is the number of local variables
-    POPF,   // Pops the first stack frame
+    PUSHE,  // Pushes a new environment frame, one argument is the number of local variables
+    POPE,   // Pops the first environment frame
+    PUSHS,  // Push a new stack frame
+    POPS,   // Pop a new stack frame
 }
 
 impl From<u8> for ByteCode {
@@ -36,37 +40,32 @@ lazy_static! {
     pub static ref BYTECODE_ARITY: HashMap<ByteCode, u32> = {
         let mut m = HashMap::new();
         m.insert(ByteCode::HALT, 0);
+        m.insert(ByteCode::JUMP, 1);
+        m.insert(ByteCode::JUMPF, 1);
         m.insert(ByteCode::POP, 0);
         m.insert(ByteCode::ADD, 0);
         m.insert(ByteCode::LOADC, 1);
         m.insert(ByteCode::LOADV, 2);
         m.insert(ByteCode::STOREV, 2);
-        m.insert(ByteCode::PUSHF, 1);
-        m.insert(ByteCode::POPF, 1);
+        m.insert(ByteCode::PUSHE, 1);
+        m.insert(ByteCode::POPE, 0);
+        m.insert(ByteCode::PUSHS, 0);
+        m.insert(ByteCode::POPS, 0);
         m
     };
 }
 
+/// Metainsts are an intermediate representation of bytecode that will be further
+/// simplified by the compiler at a later stage
 #[derive(Debug, Clone)]
 pub enum MetaInst {
     ByteCode(ByteCode),
     Number(i16),
     Label(String),
-    Const(EstaType),
+    Const(EstaData),
+    Identifier(String),
+    Declaration(String),
 }
-
-//// TODO: Add a way to generate consts and context_alloc on bytecode generation
-//pub fn assemble_metainst(v: &Vec<MetaInst>) -> Vec<u8> {
-//    v.iter()
-//        .map(|i| match i {
-//            MetaInst::ByteCode(b) => vec![b.clone().into()],
-//            MetaInst::Number(n) => n.to_le_bytes().to_vec(),
-//            MetaInst::Label(_) => Vec::new(),
-//            MetaInst::Const(_) => Vec::new(),
-//        })
-//        .flatten()
-//        .collect()
-//}
 
 pub fn disassemble_u8(v: &Vec<u8>) -> Vec<MetaInst> {
     let mut idx = 0;
